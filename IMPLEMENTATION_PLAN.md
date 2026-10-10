@@ -10,7 +10,7 @@ Clinic POS es una plataforma SaaS multiempresa de gestión clínica, administrat
 ### Stack Tecnológico
 - **Frontend & Backend**: Next.js 14+ (App Router), React, TypeScript.
 - **Estilos & UI**: Tailwind CSS, Lucide Icons, diseño moderno responsivo en español.
-- **Base de Datos & ORM**: PostgreSQL (compatible con SQLite para entorno local y desarrollo sin dependencias) con **Prisma ORM**.
+- **Base de Datos & ORM**: PostgreSQL en **Supabase** (con soporte para Connection Pooling en puerto 6543 y Direct URL en puerto 5432 para migraciones) administrado mediante **Prisma ORM**.
 - **Autenticación & Seguridad**: Tokens JWT con Cookies HTTP-only, Hashing Bcrypt, Aislamiento de Tenant a nivel de Middleware y Backend API.
 - **Exportación**: Generación de reportes Excel (`.xlsx`), TXT y JSON con validación estricta de suscripción activa.
 - **Tiempo Real**: Eventos Server-Sent / Sincronización en vivo para pantalla pública de llamados de turnos (Plan Pro).

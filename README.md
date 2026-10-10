@@ -40,15 +40,25 @@ Plataforma SaaS multiempresa integral diseñada para clínicas pequeñas, consul
 - Node.js v18.x o superior
 - npm v9.x o superior
 
+### Configuración de Base de Datos con Supabase (PostgreSQL)
+1. Crea un proyecto en [Supabase](https://supabase.com/).
+2. En la configuración de tu proyecto Supabase (**Settings > Database**), copia la URI de conexión del **Connection Pooler** (puerto 6543) y la URI de **Direct Connection** (puerto 5432).
+3. Configura tu archivo `.env`:
+   ```env
+   DATABASE_URL="postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+   DIRECT_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres"
+   JWT_SECRET="tu-clave-secreta-jwt"
+   ```
+
 ### Instalación Local
 ```bash
 # 1. Instalar dependencias
 npm install
 
-# 2. Generar cliente Prisma y ejecutar migraciones / esquema inicial
+# 2. Generar cliente Prisma y aplicar el esquema a la BD Supabase
 npm run db:push
 
-# 3. Cargar datos de prueba (Seed con Superadmin y clínicas demostrativas)
+# 3. Cargar datos de prueba (Seed con Superadmin y clínicas demo)
 npm run seed
 
 # 4. Iniciar servidor de desarrollo
