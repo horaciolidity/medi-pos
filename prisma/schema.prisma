@@ -1,0 +1,498 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ----------------------------------------------------
+// 1. ESTRUCTURA SAAS Y MULTIEMPRESA
+// ----------------------------------------------------
+
+model Company {
+  id              String   @id @default(uuid())
+  name            String
+  logoUrl         String?
+  razonSocial     String?
+  cuit            String?  @unique
+  fiscalCondition String?  // Responsable Inscripto, Monotributo, Exento
+  address         String?
+  phone           String?
+  email           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  branches         Branch[]
+  users            User[]
+  subscriptions    Subscription[]
+  patients         Patient[]
+  ehrRecords       EHRRecord[]
+  ehrAmendments    EHRAmendment[]
+  triages          Triage[]
+  nursingRecords   NursingRecord[]
+  queueTurnos      QueueTurno[]
+  products         Product[]
+  productBatches   ProductBatch[]
+  stockMovements   StockMovement[]
+  serviceTariffs   ServiceTariff[]
+  cashShifts       CashShift[]
+  cashMovements    CashMovement[]
+  billingInvoices  BillingInvoice[]
+  incidents        Incident[]
+  auditLogs        AuditLog[]
+  subscriptionLogs SubscriptionLog[]
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  code      String   @default("SUC1")
+  address   String?
+  phone     String?
+  createdAt DateTime @default(now())
+
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sectors     Sector[]
+  boxes       Box[]
+  users       User[]
+  queueTurnos QueueTurno[]
+  cashShifts  CashShift[]
+  incidents   Incident[]
+}
+
+model Sector {
+  id       String @id @default(uuid())
+  branchId String
+  name     String
+  code     String
+
+  branch      Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  queueTurnos QueueTurno[]
+}
+
+model Box {
+  id       String @id @default(uuid())
+  branchId String
+  name     String // Ej: "Consultorio 1"
+  code     String // Ej: "BOX-1"
+  status   String @default("AVAILABLE")
+
+  branch      Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  queueTurnos QueueTurno[]
+}
+
+// ----------------------------------------------------
+// 2. PLANES COMERCIALES Y SUSCRIPCIONES
+// ----------------------------------------------------
+
+model Plan {
+  id                  String   @id @default(uuid())
+  code                String   @unique
+  name                String
+  description          String
+  monthlyPrice         Float
+  isProTurneroEnabled Boolean  @default(false)
+  featuresJson         String   @default("[]")
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  subscriptions Subscription[]
+  priceHistory  PlanPricingHistory[]
+}
+
+model PlanPricingHistory {
+  id             String   @id @default(uuid())
+  planId         String
+  oldPrice       Float
+  newPrice       Float
+  changedByEmail String
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id                   String   @id @default(uuid())
+  companyId            String
+  planId               String
+  status               String   @default("ACTIVE")
+  startedAt            DateTime           @default(now())
+  expiresAt            DateTime
+  monthlyPriceAtSignup Float
+  notes                String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan    Plan    @relation(fields: [planId], references: [id])
+}
+
+model SubscriptionLog {
+  id             String   @id @default(uuid())
+  companyId      String
+  subscriptionId String?
+  oldStatus      String
+  newStatus      String
+  oldExpiresAt  DateTime
+  newExpiresAt  DateTime
+  changedBy     String
+  reason        String
+  createdAt     DateTime           @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+// ----------------------------------------------------
+// 3. USUARIOS Y PERMISOS
+// ----------------------------------------------------
+
+model User {
+  id           String    @id @default(uuid())
+  companyId    String?   // null para SUPER_ADMIN global
+  branchId     String?
+  email        String    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  dni          String?
+  role         String   @default("ADMIN")
+  specialty    String?
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  company           Company?        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch            Branch?         @relation(fields: [branchId], references: [id])
+  ehrRecords        EHRRecord[]
+  ehrAmendments     EHRAmendment[]
+  triages           Triage[]
+  nursingRecords    NursingRecord[]
+  stockMovements    StockMovement[]
+  cashShifts        CashShift[]
+  cashMovements     CashMovement[]
+  authoredIncidents Incident[]      @relation("IncidentAuthor")
+  assignedIncidents Incident[]      @relation("IncidentAssignee")
+  auditLogs         AuditLog[]
+}
+
+// ----------------------------------------------------
+// 4. PACIENTES E HISTORIA CLÍNICA (LONGITUDINAL)
+// ----------------------------------------------------
+
+model Patient {
+  id                   String   @id @default(uuid())
+  companyId            String
+  documentType         String   @default("DNI")
+  documentNumber       String
+  firstName            String
+  lastName             String
+  gender               String?
+  birthDate            String?
+  email                String?
+  phone                String?
+  address              String?
+  emergencyContactName String?
+  emergencyContactPhone String?
+  medicalInsuranceName String?  // Obra Social / Prepaga
+  affiliateNumber      String?
+  bloodType            String?
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  ehrRecords      EHRRecord[]
+  triages         Triage[]
+  nursingRecords  NursingRecord[]
+  queueTurnos     QueueTurno[]
+  billingInvoices BillingInvoice[]
+
+  @@unique([companyId, documentNumber])
+}
+
+model EHRRecord {
+  id                   String   @id @default(uuid())
+  companyId            String
+  patientId            String
+  authorId             String
+  reasonForVisit       String
+  symptoms             String?
+  diagnosis            String
+  vitalSignsJson       String?  // PA, FC, Temp, etc.
+  treatmentPlan        String?
+  prescribedMedication String?
+  observations         String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  company    Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  patient    Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  author     User           @relation(fields: [authorId], references: [id])
+  amendments EHRAmendment[]
+}
+
+model EHRAmendment {
+  id              String   @id @default(uuid())
+  ehrRecordId     String
+  companyId       String
+  authorId        String
+  amendmentReason String
+  content         String
+  createdAt       DateTime @default(now())
+
+  ehrRecord EHRRecord @relation(fields: [ehrRecordId], references: [id], onDelete: Cascade)
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id])
+}
+
+// ----------------------------------------------------
+// 5. TRIAGE Y ENFERMERÍA
+// ----------------------------------------------------
+
+model Triage {
+  id               String   @id @default(uuid())
+  companyId        String
+  patientId        String
+  branchId         String?
+  authorId         String
+  priorityLevel    String   @default("GREEN")
+  chiefComplaint   String
+  systolicBP       Int?
+  diastolicBP      Int?
+  heartRate        Int?
+  temperature      Float?
+  oxygenSaturation Int?
+  notes            String?
+  createdAt        DateTime       @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id])
+}
+
+model NursingRecord {
+  id                     String   @id @default(uuid())
+  companyId              String
+  patientId              String
+  authorId               String
+  vitalSignsJson         String?
+  proceduresDone         String?
+  medicationAdministered String?
+  notes                  String?
+  createdAt              DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id])
+}
+
+// ----------------------------------------------------
+// 6. RECEPCIÓN, TURNOS Y LLAMADOS (TURNERO PRO)
+// ----------------------------------------------------
+
+model QueueTurno {
+  id           String      @id @default(uuid())
+  companyId    String
+  branchId     String
+  sectorId     String?
+  boxId        String?
+  patientId    String?
+  ticketNumber String   // Ej: "A001"
+  prefix       String   @default("A")
+  number       Int
+  status       String   @default("WAITING")
+  calledAt     DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime    @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch  Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  sector  Sector? @relation(fields: [sectorId], references: [id])
+  box     Box?    @relation(fields: [boxId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id])
+}
+
+// ----------------------------------------------------
+// 7. FARMACIA E INVENTARIO
+// ----------------------------------------------------
+
+model Product {
+  id            String   @id @default(uuid())
+  companyId     String
+  internalCode  String
+  name          String
+  category      String   // Medicamento, Insumo descartable, etc.
+  unit          String   // Caja, Ampolla, Unidad, Blister
+  currentStock  Int      @default(0)
+  minStockAlert Int      @default(10)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  productBatches ProductBatch[]
+  stockMovements StockMovement[]
+
+  @@unique([companyId, internalCode])
+}
+
+model ProductBatch {
+  id             String   @id @default(uuid())
+  productId      String
+  companyId      String
+  batchNumber    String
+  expirationDate String   // Formato YYYY-MM-DD
+  quantity       Int
+  createdAt      DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model StockMovement {
+  id        String   @id @default(uuid())
+  productId String
+  companyId String
+  authorId  String
+  type      String
+  quantity  Int
+  reason    String
+  createdAt DateTime          @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id])
+}
+
+// ----------------------------------------------------
+// 8. PRESTACIONES, ARANCELES Y CAJA POS
+// ----------------------------------------------------
+
+model ServiceTariff {
+  id          String   @id @default(uuid())
+  companyId   String
+  code        String
+  name        String
+  description String?
+  price       Float
+  copayAmount Float    @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+}
+
+model CashShift {
+  id                 String          @id @default(uuid())
+  companyId          String
+  branchId           String
+  operatorId         String
+  openedAt           DateTime        @default(now())
+  closedAt           DateTime?
+  initialFund        Float
+  expectedFinalFund Float   @default(0)
+  actualFinalFund   Float?
+  differenceAmount  Float?
+  status            String  @default("OPEN")
+  closingNotes       String?
+
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch        Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  operator      User           @relation(fields: [operatorId], references: [id])
+  cashMovements CashMovement[]
+}
+
+model CashMovement {
+  id            String        @id @default(uuid())
+  cashShiftId   String
+  companyId     String
+  operatorId    String
+  type          String   // INCOME, EXPENSE, REFUND
+  amount        Float
+  paymentMethod String   @default("CASH")
+  concept       String
+  isVoided      Boolean       @default(false)
+  voidReason    String?
+  createdAt     DateTime      @default(now())
+
+  cashShift       CashShift        @relation(fields: [cashShiftId], references: [id], onDelete: Cascade)
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  operator        User             @relation(fields: [operatorId], references: [id])
+  billingInvoices BillingInvoice[]
+}
+
+// ----------------------------------------------------
+// 9. FACTURACIÓN Y COMPROBANTES FISCALES (ARCA/AFIP)
+// ----------------------------------------------------
+
+model BillingInvoice {
+  id             String       @id @default(uuid())
+  companyId      String
+  patientId      String?
+  cashMovementId String?
+  invoiceType   String   @default("FACTURA_B")
+  invoiceNumber String   @default("0001-00000001")
+  cuitEmisor    String?
+  cuitReceptor  String?
+  totalAmount   Float
+  vatAmount     Float    @default(0)
+  fiscalStatus  String   @default("AUTHORIZED_SIMULATED")
+  caeCode        String?
+  caeExpiration  String?
+  createdAt      DateTime     @default(now())
+
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  patient      Patient?      @relation(fields: [patientId], references: [id])
+  cashMovement CashMovement? @relation(fields: [cashMovementId], references: [id])
+}
+
+// ----------------------------------------------------
+// 10. NOVEDADES E INCIDENCIAS INTERNAS
+// ----------------------------------------------------
+
+model Incident {
+  id             String           @id @default(uuid())
+  companyId      String
+  authorId       String
+  assignedUserId String?
+  branchId       String?
+  title          String
+  description    String
+  category       String   @default("GENERAL")
+  priority       String   @default("MEDIUM")
+  status         String   @default("OPEN")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  author   User    @relation("IncidentAuthor", fields: [authorId], references: [id])
+  assigned User?   @relation("IncidentAssignee", fields: [assignedUserId], references: [id])
+  branch   Branch? @relation(fields: [branchId], references: [id])
+}
+
+// ----------------------------------------------------
+// 11. AUDITORÍA GLOBAL DE EVENTOS SENSIBLES
+// ----------------------------------------------------
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  companyId String?
+  userId    String?
+  userEmail String
+  action    String   // Ej: "CREATE_PATIENT", "LOGIN", "EXPORT_EXCEL", "EXTEND_SUBSCRIPTION"
+  module    String   // Ej: "AUTH", "PATIENTS", "SUPERADMIN", "EHR"
+  details   String
+  ipAddress String?  @default("127.0.0.1")
+  createdAt DateTime @default(now())
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
