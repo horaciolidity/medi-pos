@@ -16,6 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<any>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showPlansModal, setShowPlansModal] = useState(false);
 
   useEffect(() => {
     async function loadMe() {
@@ -70,8 +71,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
-      {/* Top Banner Alerta de Suscripción */}
-      {isReadOnly && (
+      {/* Top Banner de Prueba Gratuita (50 pacientes) */}
+      {subscription?.isTrial && !subscription?.isTrialLimitReached && (
+        <div className="bg-sky-600 text-white px-6 py-2 flex items-center justify-between text-xs font-semibold shadow-sm">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-sky-200" />
+            <span>
+              <strong>🎁 Prueba Gratuita:</strong> Has registrado <strong>{subscription.trialPatientsCount || 0} de 50 pacientes gratuitos</strong>. Quedan {Math.max(0, 50 - (subscription.trialPatientsCount || 0))} ingresos disponibles.
+            </span>
+          </div>
+          <button
+            onClick={() => setShowPlansModal(true)}
+            className="bg-white text-sky-900 hover:bg-sky-50 px-3 py-1 rounded-lg text-xs font-bold shrink-0 ml-4 transition-colors"
+          >
+            Ver Planes Disponibles
+          </button>
+        </div>
+      )}
+
+      {/* Top Banner Límite de Prueba Gratuita Alcanzado */}
+      {subscription?.isTrialLimitReached && (
+        <div className="bg-amber-600 text-slate-950 px-6 py-2.5 flex items-center justify-between text-xs font-bold shadow-md">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5 shrink-0 text-slate-950 animate-pulse" />
+            <span>
+              <strong>LÍMITE DE PRUEBA GRATUITA ALCANZADO (50/50 PACIENTES):</strong> Has completado tus 50 ingresos gratuitos.
+              Para continuar registrando nuevos pacientes y atenciones, activa el Plan Estándar o Plan Pro.
+            </span>
+          </div>
+          <button
+            onClick={() => setShowPlansModal(true)}
+            className="bg-slate-950 text-white hover:bg-slate-900 px-3.5 py-1.5 rounded-lg text-xs font-bold shrink-0 ml-4 transition-colors"
+          >
+            Elegir Plan Comercial
+          </button>
+        </div>
+      )}
+
+      {/* Top Banner Alerta de Suscripción Vencida (No Trial) */}
+      {isReadOnly && !subscription?.isTrialLimitReached && (
         <div className="bg-amber-600 text-slate-950 px-6 py-2.5 flex items-center justify-between text-xs font-bold shadow-md">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 shrink-0 text-slate-950 animate-pulse" />
@@ -81,22 +119,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </span>
           </div>
           <button
-            onClick={() => alert('Para regularizar su suscripción o solicitar asistencia, comuníquese con el Superadmin o su representante comercial.')}
+            onClick={() => setShowPlansModal(true)}
             className="bg-slate-950 text-white hover:bg-slate-900 px-3 py-1 rounded-lg text-xs font-bold shrink-0 ml-4 transition-colors"
           >
-            Regularizar Pago
+            Regularizar Plan
           </button>
-        </div>
-      )}
-
-      {subscription && !isReadOnly && subscription.daysRemaining <= 5 && (
-        <div className="bg-amber-500/20 border-b border-amber-500/40 text-amber-900 px-6 py-2 text-xs font-semibold flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-600" />
-            <span>
-              Aviso de suscripción: Su {subscription.planName} vence en <strong>{subscription.daysRemaining} días</strong>.
-            </span>
-          </div>
         </div>
       )}
 
@@ -175,6 +202,98 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+
+      {/* Modal de Selección de Planes Comerciales */}
+      {showPlansModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 w-full max-w-3xl rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="text-xs font-bold text-sky-400 uppercase tracking-wider block">Planes Comerciales Clinic POS</span>
+                <h3 className="text-xl font-black text-white mt-1">Elegí el plan que mejor se adapta a tu clínica</h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Tu prueba gratuita incluye hasta 50 ingresos de pacientes. Al activar un plan continuás gestionando sin límites.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPlansModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Plan Estándar */}
+              <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 space-y-4 flex flex-col justify-between hover:border-sky-500/50 transition-all">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-extrabold text-base text-white">Plan Estándar</span>
+                    <span className="bg-sky-500/10 text-sky-400 border border-sky-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                      Recomendado
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-2xl font-black text-white font-mono">ARS $14.900</span>
+                    <span className="text-xs text-slate-400"> / mes</span>
+                  </div>
+                  <ul className="space-y-2 text-xs text-slate-300">
+                    <li className="flex items-center gap-2">✓ Pacientes ilimitados</li>
+                    <li className="flex items-center gap-2">✓ Historias Clínicas longitudinales</li>
+                    <li className="flex items-center gap-2">✓ Triage confidencial & Enfermería</li>
+                    <li className="flex items-center gap-2">✓ Farmacia, stock & lotes</li>
+                    <li className="flex items-center gap-2">✓ Caja POS & Arqueos</li>
+                    <li className="flex items-center gap-2">✓ Exportación Excel, TXT, JSON</li>
+                    <li className="flex items-center gap-2 text-slate-500">✗ Turnero avanzado con pantalla pública</li>
+                  </ul>
+                </div>
+                <button
+                  onClick={() => {
+                    alert('Para contratar el Plan Estándar (ARS $14.900/mes), podés comunicarte con tu asesor comercial o coordinar el medio de pago.');
+                    setShowPlansModal(false);
+                  }}
+                  className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition-colors shadow-lg shadow-sky-500/20"
+                >
+                  Contratar Plan Estándar
+                </button>
+              </div>
+
+              {/* Plan Pro */}
+              <div className="bg-gradient-to-b from-slate-800 to-slate-850 border border-emerald-500/40 rounded-2xl p-6 space-y-4 flex flex-col justify-between shadow-xl shadow-emerald-500/5">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-extrabold text-base text-white">Plan Pro</span>
+                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                      Completo
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-2xl font-black text-white font-mono">ARS $24.900</span>
+                    <span className="text-xs text-slate-400"> / mes</span>
+                  </div>
+                  <ul className="space-y-2 text-xs text-slate-300">
+                    <li className="flex items-center gap-2">✓ Todo lo del Plan Estándar</li>
+                    <li className="flex items-center gap-2 font-semibold text-emerald-300">✓ Turnero avanzado en tiempo real</li>
+                    <li className="flex items-center gap-2 font-semibold text-emerald-300">✓ Pantalla pública de llamados por box</li>
+                    <li className="flex items-center gap-2 font-semibold text-emerald-300">✓ Impresión de tickets térmicos</li>
+                    <li className="flex items-center gap-2 font-semibold text-emerald-300">✓ Configuración de boxes y colas</li>
+                    <li className="flex items-center gap-2 font-semibold text-emerald-300">✓ Derivación entre sectores</li>
+                  </ul>
+                </div>
+                <button
+                  onClick={() => {
+                    alert('Para contratar el Plan Pro (ARS $24.900/mes), podés comunicarte con tu asesor comercial o coordinar el medio de pago.');
+                    setShowPlansModal(false);
+                  }}
+                  className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition-colors shadow-lg shadow-emerald-500/20"
+                >
+                  Contratar Plan Pro
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

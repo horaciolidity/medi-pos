@@ -28,7 +28,35 @@ export async function POST(req: NextRequest) {
 
     // Buscar Plan seleccionado (Estándar o Pro)
     const targetPlanCode = planCode === PlanCode.PRO ? PlanCode.PRO : PlanCode.STANDARD;
-    const plan = await prisma.plan.findUnique({ where: { code: targetPlanCode } });
+    // Asegurar que los planes estándar y pro existan en la base de datos
+    let plan = await prisma.plan.findUnique({ where: { code: targetPlanCode } });
+    if (!plan) {
+      await prisma.plan.upsert({
+        where: { code: PlanCode.STANDARD },
+        update: {},
+        create: {
+          code: PlanCode.STANDARD,
+          name: 'Plan Estándar',
+          description: 'Gestión clínica completa para consultorios y clínicas pequeñas (Pacientes, Historia Clínica, Enfermería, Triage, Caja, Inventario, Reportes).',
+          monthlyPrice: 14900,
+          isProTurneroEnabled: false,
+        },
+      });
+
+      await prisma.plan.upsert({
+        where: { code: PlanCode.PRO },
+        update: {},
+        create: {
+          code: PlanCode.PRO,
+          name: 'Plan Pro',
+          description: 'Todo lo incluido en el Plan Estándar + Turnero Avanzado, Llamados en Pantalla Pública en Tiempo Real, Tickets Térmicos y Boxes Configurables.',
+          monthlyPrice: 24900,
+          isProTurneroEnabled: true,
+        },
+      });
+
+      plan = await prisma.plan.findUnique({ where: { code: targetPlanCode } });
+    }
 
     if (!plan) {
       return NextResponse.json({ error: 'Plan seleccionado inválido' }, { status: 400 });
@@ -36,9 +64,9 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await hashPassword(password);
 
-    // Crear Empresa, Sucursal Principal, Usuario Admin y Suscripción de 30 días
+    // Crear Empresa, Sucursal Principal, Usuario Admin y Suscripción en MODO PRUEBA GRATUITA (TRIAL)
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30);
+    expiresAt.setDate(expiresAt.getDate() + 30); // 30 días de vigencia de prueba
 
     const result = await prisma.$transaction(async (tx) => {
       const company = await tx.company.create({
@@ -75,11 +103,11 @@ export async function POST(req: NextRequest) {
         data: {
           companyId: company.id,
           planId: plan.id,
-          status: SubscriptionStatus.ACTIVE,
+          status: SubscriptionStatus.TRIAL, // MODO PRUEBA GRATUITA (50 PACIENTES)
           startedAt: new Date(),
           expiresAt,
           monthlyPriceAtSignup: plan.monthlyPrice,
-          notes: `Alta inicial de clínica con ${plan.name}`,
+          notes: 'Prueba Gratuita Inicial: Hasta 50 ingresos de pacientes sin costo.',
         },
       });
 

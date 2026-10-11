@@ -82,15 +82,23 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Selección de Plan */}
+            {/* Selección de Plan con Prueba Gratuita */}
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">Seleccioná tu Plan Comercial Inicial</label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="flex justify-between items-center">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">Plan Comercial a Probar</label>
+                <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                  🎁 Incluye 50 pacientes gratis
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Tu registro activa el <strong>Modo Prueba Gratuita con 50 ingresos de pacientes sin costo</strong>. Al alcanzar los 50 pacientes podés activar el plan que elijas.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                 <div
                   onClick={() => setFormData({ ...formData, planCode: 'STANDARD' })}
                   className={`p-4 rounded-xl border cursor-pointer transition-all ${
                     formData.planCode === 'STANDARD'
-                      ? 'border-sky-500 bg-sky-500/10 text-white'
+                      ? 'border-sky-500 bg-sky-500/10 text-white shadow-lg shadow-sky-500/5'
                       : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
                   }`}
                 >
@@ -107,7 +115,7 @@ export default function RegisterPage() {
                   onClick={() => setFormData({ ...formData, planCode: 'PRO' })}
                   className={`p-4 rounded-xl border cursor-pointer transition-all ${
                     formData.planCode === 'PRO'
-                      ? 'border-emerald-500 bg-emerald-500/10 text-white'
+                      ? 'border-emerald-500 bg-emerald-500/10 text-white shadow-lg shadow-emerald-500/5'
                       : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
                   }`}
                 >

@@ -58,37 +58,19 @@ export default function LoginPage() {
           <p className="text-xs text-slate-400">Plataforma SaaS para clínicas y consultorios en Argentina</p>
         </div>
 
-        {/* Quick Demo Fill Buttons */}
-        <div className="bg-slate-800/60 border border-slate-700 p-4 rounded-2xl space-y-2">
-          <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">Acceso Rápido Demo:</span>
-          <div className="grid grid-cols-1 gap-2">
-            <button
-              type="button"
-              onClick={() => quickFill('admin@centro-salud-norte.com.ar', 'Clinica2026!')}
-              className="text-left text-xs bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 p-2.5 rounded-xl font-medium transition-colors flex items-center justify-between"
-            >
-              <span>🏥 <strong>Clínica Activa (Plan Pro)</strong> - Admin</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => quickFill('admin@consultorios-sur.com.ar', 'Clinica2026!')}
-              className="text-left text-xs bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 p-2.5 rounded-xl font-medium transition-colors flex items-center justify-between"
-            >
-              <span>🔒 <strong>Clínica Vencida (Solo Lectura)</strong> - Admin</span>
-              <ShieldAlert className="w-4 h-4 text-amber-400" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => quickFill('superadmin@clinicpos.ar', 'SuperAdmin2026!')}
-              className="text-left text-xs bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 p-2.5 rounded-xl font-medium transition-colors flex items-center justify-between"
-            >
-              <span>⚡ <strong>Superadmin Global SaaS</strong></span>
-              <ArrowRight className="w-4 h-4 text-purple-400" />
-            </button>
+        {/* Free Trial Banner */}
+        <div className="bg-sky-500/10 border border-sky-500/30 p-4 rounded-2xl flex items-center justify-between gap-3 shadow-lg shadow-sky-500/5">
+          <div className="space-y-0.5">
+            <span className="text-xs font-black text-sky-400 uppercase tracking-wider block">🎁 Prueba Gratuita Inicial</span>
+            <p className="text-xs text-slate-300">50 pacientes y atenciones gratis sin tarjeta de crédito</p>
           </div>
+          <Link
+            href="/register"
+            className="shrink-0 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs transition-colors flex items-center gap-1.5"
+          >
+            <span>Crear Cuenta</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         {/* Login Form Card */}

@@ -12,18 +12,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email y contraseña requeridos' }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: email.trim().toLowerCase() },
+    const cleanEmail = email.trim().toLowerCase();
+    const superadminEmail = (process.env.SUPERADMIN_EMAIL || 'superadmin@clinicpos.ar').toLowerCase();
+    const superadminPass = process.env.SUPERADMIN_PASSWORD || 'SuperAdmin2026!';
+
+    let user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
       include: { company: true },
     });
 
+    // Si es el Superadmin y aún no existe en la base de datos recién conectada, auto-crearlo
+    if (!user && cleanEmail === superadminEmail) {
+      const { hashPassword } = await import('@/lib/auth');
+      const passwordHash = await hashPassword(superadminPass);
+      user = await prisma.user.create({
+        data: {
+          email: superadminEmail,
+          passwordHash,
+          firstName: 'Super',
+          lastName: 'Admin',
+          role: Role.SUPER_ADMIN,
+        },
+        include: { company: true },
+      });
+    }
+
     if (!user || !user.isActive) {
-      return NextResponse.json({ error: 'Credenciales inválidas o cuenta desactivada' }, { status: 401 });
+      return NextResponse.json({ error: 'Credenciales inválidas o cuenta no encontrada. Si no te has registrado, crea tu cuenta gratuita de 50 pacientes.' }, { status: 401 });
     }
 
     const isMatch = await comparePassword(password, user.passwordHash);
     if (!isMatch) {
-      return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 });
+      return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
     }
 
     // Actualizar último login
@@ -77,6 +97,22 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error: any) {
     console.error('Error en /api/auth/login:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+
+    // Diagnóstico claro si las tablas aún no existen en Supabase
+    if (error.code === 'P2021' || error.message?.includes('does not exist') || error.message?.includes('relation')) {
+      return NextResponse.json({
+        error: 'Las tablas no existen aún en Supabase. Debes ejecutar "npx prisma db push" en tu terminal para crearlas en la base de datos.',
+        code: 'TABLES_NOT_FOUND',
+      }, { status: 500 });
+    }
+
+    if (error.code === 'P1001' || error.message?.includes('Can\'t reach database server')) {
+      return NextResponse.json({
+        error: 'No se pudo conectar al servidor de Supabase. Revisa que DATABASE_URL y DIRECT_URL tengan la contraseña correcta.',
+        code: 'DB_CONNECTION_FAILED',
+      }, { status: 500 });
+    }
+
+    return NextResponse.json({ error: error.message || 'Error interno del servidor al procesar el inicio de sesión' }, { status: 500 });
   }
 }
