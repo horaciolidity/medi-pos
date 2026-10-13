@@ -90,24 +90,72 @@ export default function ExportarPage() {
 
           {/* 1. Seleccionar Módulo */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">1. Seleccionar Módulo a Exportar</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">1. Seleccionar Módulo / Reporte a Exportar</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {[
-                { id: 'pacientes', label: 'Pacientes' },
-                { id: 'turnos', label: 'Turnos del Día' },
-                { id: 'farmacia', label: 'Farmacia & Insumos' },
-                { id: 'caja', label: 'Caja & Movimientos' },
+                {
+                  id: 'atenciones_medicas',
+                  label: 'Atenciones Médicas (EHR)',
+                  desc: 'Fecha/hora, paciente, médico tratante, matrícula, turno y diagnóstico.',
+                  tag: 'Clínica',
+                },
+                {
+                  id: 'enfermeria',
+                  label: 'Enfermería & Signos Vitales',
+                  desc: 'Signos vitales, procedimientos, enfermero a cargo, turno y fecha/hora.',
+                  tag: 'Enfermería',
+                },
+                {
+                  id: 'movimientos_farmacia',
+                  label: 'Farmacia & Insumos',
+                  desc: 'Egresos e ingresos de stock, responsable, turno y motivo.',
+                  tag: 'Farmacia',
+                },
+                {
+                  id: 'personal',
+                  label: 'Personal & Turnos',
+                  desc: 'Padrón de médicos, enfermeros y farmacéuticos con matrículas y horarios.',
+                  tag: 'RRHH',
+                },
+                {
+                  id: 'pacientes',
+                  label: 'Padrón de Pacientes',
+                  desc: 'Datos de contacto, documento, obra social y número de afiliado.',
+                  tag: 'Recepción',
+                },
+                {
+                  id: 'caja',
+                  label: 'Caja & Movimientos',
+                  desc: 'Turnos de caja, fondo inicial/cierre, operadores y arqueos.',
+                  tag: 'Finanzas',
+                },
+                {
+                  id: 'turnos',
+                  label: 'Turnos de Sala de Espera',
+                  desc: 'Tickets emitidos, estado, tiempos y box de atención.',
+                  tag: 'Recepción',
+                },
               ].map((m) => (
                 <div
                   key={m.id}
                   onClick={() => setSelectedModule(m.id)}
-                  className={`p-3.5 rounded-xl border text-xs font-bold text-center cursor-pointer transition-all ${
+                  className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
                     selectedModule === m.id
-                      ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-sm'
+                      ? 'border-sky-500 bg-sky-50 shadow-sm ring-1 ring-sky-500/20'
                       : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
                   }`}
                 >
-                  {m.label}
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-xs font-bold ${selectedModule === m.id ? 'text-sky-900' : 'text-slate-900'}`}>
+                      {m.label}
+                    </span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                      {m.tag}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 line-clamp-2 leading-tight">
+                    {m.desc}
+                  </p>
                 </div>
               ))}
             </div>

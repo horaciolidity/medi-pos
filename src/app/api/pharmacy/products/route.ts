@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
         stockMovements: {
           orderBy: { createdAt: 'desc' },
           take: 5,
-          include: { author: { select: { firstName: true, lastName: true } } },
+          include: { author: { select: { firstName: true, lastName: true, matricula: true, role: true, area: true, shiftHours: true } } },
         },
       },
       orderBy: { name: 'asc' },
@@ -138,7 +138,7 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const { productId, type, quantity, reason } = await req.json();
+    const { productId, type, quantity, reason, authorId } = await req.json();
 
     if (!productId || !type || !quantity || !reason) {
       return NextResponse.json({ error: 'Faltan parámetros obligatorios para el movimiento' }, { status: 400 });
@@ -159,6 +159,7 @@ export async function PUT(req: NextRequest) {
     else if (type === StockMovementType.ADJUSTMENT) stockDelta = qty; // puede ser positivo o negativo
 
     const newStock = Math.max(0, product.currentStock + stockDelta);
+    const assignedAuthorId = authorId || session.userId;
 
     const [updatedProduct] = await prisma.$transaction([
       prisma.product.update({
@@ -169,7 +170,7 @@ export async function PUT(req: NextRequest) {
         data: {
           productId,
           companyId: session.companyId,
-          authorId: session.userId,
+          authorId: assignedAuthorId,
           type,
           quantity: qty,
           reason,

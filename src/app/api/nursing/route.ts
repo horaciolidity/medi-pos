@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       where: { companyId: session.companyId },
       include: {
         patient: { select: { firstName: true, lastName: true, documentNumber: true } },
-        author: { select: { firstName: true, lastName: true } },
+        author: { select: { firstName: true, lastName: true, matricula: true, role: true, area: true, shiftHours: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 100,
@@ -42,24 +42,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { patientId, vitalSigns, proceduresDone, medicationAdministered, notes } = await req.json();
+    const { patientId, vitalSigns, proceduresDone, medicationAdministered, notes, authorId } = await req.json();
 
     if (!patientId) {
       return NextResponse.json({ error: 'ID del paciente requerido' }, { status: 400 });
     }
 
+    const assignedAuthorId = authorId || session.userId;
+
     const record = await prisma.nursingRecord.create({
       data: {
         companyId: session.companyId,
         patientId,
-        authorId: session.userId,
+        authorId: assignedAuthorId,
         vitalSignsJson: vitalSigns ? JSON.stringify(vitalSigns) : null,
         proceduresDone,
         medicationAdministered,
         notes,
       },
       include: {
-        patient: { select: { firstName: true, lastName: true } },
+        patient: { select: { firstName: true, lastName: true, documentNumber: true } },
+        author: { select: { firstName: true, lastName: true, matricula: true, role: true, area: true, shiftHours: true } },
       },
     });
 

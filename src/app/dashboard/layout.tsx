@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   Activity, Users, FileText, Stethoscope, HeartPulse, Clock,
   Package, ShoppingCart, Receipt, Bell, Download, LogOut,
-  ShieldAlert, Sparkles, Building2, ChevronRight, User as UserIcon, Sliders
+  ShieldAlert, Sparkles, Building2, ChevronRight, User as UserIcon, Sliders, UserCheck
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -57,6 +57,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const menuItems = [
     { label: 'Visión General', href: '/dashboard', icon: Activity },
     { label: 'Pacientes & H.C.', href: '/dashboard/pacientes', icon: Users },
+    { label: 'Personal & Turnos', href: '/dashboard/personal', icon: UserCheck },
     { label: 'Enfermería', href: '/dashboard/enfermeria', icon: HeartPulse },
     { label: 'Recepción & Turnos', href: '/dashboard/turnos', icon: Clock },
     { label: 'Farmacia & Insumos', href: '/dashboard/farmacia', icon: Package },

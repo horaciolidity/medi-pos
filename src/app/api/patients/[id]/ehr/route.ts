@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const ehrRecords = await prisma.eHRRecord.findMany({
       where: { patientId, companyId: session.companyId },
       include: {
-        author: { select: { firstName: true, lastName: true, role: true, specialty: true } },
+        author: { select: { firstName: true, lastName: true, role: true, specialty: true, matricula: true, shiftHours: true } },
         amendments: {
           include: { author: { select: { firstName: true, lastName: true } } },
           orderBy: { createdAt: 'desc' },
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const patientId = params.id;
     const body = await req.json();
-    const { reasonForVisit, symptoms, diagnosis, vitalSigns, treatmentPlan, prescribedMedication, observations } = body;
+    const { reasonForVisit, symptoms, diagnosis, vitalSigns, treatmentPlan, prescribedMedication, observations, authorId } = body;
 
     if (!reasonForVisit || !diagnosis) {
       return NextResponse.json({ error: 'Motivo de consulta y diagnóstico son obligatorios' }, { status: 400 });
@@ -74,11 +74,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 });
     }
 
+    const assignedAuthorId = authorId || session.userId;
+
     const record = await prisma.eHRRecord.create({
       data: {
         companyId: session.companyId,
         patientId,
-        authorId: session.userId,
+        authorId: assignedAuthorId,
         reasonForVisit,
         symptoms,
         diagnosis,

@@ -166,6 +166,11 @@ model User {
   dni          String?
   role         String   @default("ADMIN")
   specialty    String?
+  matricula    String?
+  phone        String?
+  area         String?   // MEDICO, ENFERMERIA, FARMACIA, RECEPCION, ADMIN
+  shiftHours   String?   // Turno Mañana (08:00 - 14:00), etc.
+  workDays     String?   // Lunes a Viernes, etc.
   isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())

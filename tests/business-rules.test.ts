@@ -30,22 +30,22 @@ describe('Control de Acceso y Roles (RBAC)', () => {
     expect(session.companyId).toBeTruthy();
   });
 
-  it('El rol DOCTOR solo puede registrar evoluciones clínicas propias', () => {
-    const doctorRole = Role.DOCTOR;
+  it('El rol MEDICO solo puede registrar evoluciones clínicas propias', () => {
+    const doctorRole = Role.MEDICO;
     const allowedActions = ['CREATE_EHR', 'VIEW_EHR', 'VIEW_PATIENT', 'ADD_AMENDMENT'];
     const blockedActions = ['DELETE_PATIENT', 'UPDATE_SUBSCRIPTION', 'EXPORT_ALL'];
 
     expect(allowedActions.every((a) => a !== 'DELETE_PATIENT')).toBe(true);
     expect(blockedActions.includes('DELETE_PATIENT')).toBe(true);
-    expect(doctorRole).toBe('DOCTOR');
+    expect(doctorRole).toBe('MEDICO');
   });
 
-  it('El rol RECEPTION no puede acceder a Historia Clínica (triage confidencial)', () => {
-    const receptionRole = Role.RECEPTION;
+  it('El rol RECEPCION no puede acceder a Historia Clínica (confidencial)', () => {
+    const receptionRole = Role.RECEPCION;
     const restrictedModules = ['EHR', 'TRIAGE'];
 
     // Recepción solo puede operar turnos, caja y cobros
-    expect(receptionRole).toBe('RECEPTION');
+    expect(receptionRole).toBe('RECEPCION');
     expect(restrictedModules.includes('TRIAGE')).toBe(true);
   });
 });
@@ -63,8 +63,8 @@ describe('SaaS Multiempresa - Aislamiento de Datos', () => {
   });
 
   it('Un usuario no puede acceder a pacientes de otra empresa', () => {
-    const sessionCompanyId = 'empresa-propia';
-    const targetPatientCompanyId = 'empresa-ajena';
+    const sessionCompanyId: string = 'empresa-propia';
+    const targetPatientCompanyId: string = 'empresa-ajena';
 
     const hasAccess = sessionCompanyId === targetPatientCompanyId;
     expect(hasAccess).toBe(false);
@@ -153,7 +153,7 @@ describe('Turnero y Plan Pro', () => {
     const validTransitions = [
       { from: TurnoStatus.WAITING, to: TurnoStatus.CALLED },
       { from: TurnoStatus.CALLED, to: TurnoStatus.COMPLETED },
-      { from: TurnoStatus.WAITING, to: TurnoStatus.ABSENT },
+      { from: TurnoStatus.WAITING, to: TurnoStatus.CANCELLED },
     ];
 
     validTransitions.forEach((t) => {

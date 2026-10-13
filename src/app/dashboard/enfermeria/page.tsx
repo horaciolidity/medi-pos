@@ -6,12 +6,14 @@ import { HeartPulse, Plus, AlertCircle, Check } from 'lucide-react';
 export default function EnfermeriaPage() {
   const [records, setRecords] = useState<any[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
+  const [nurses, setNurses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReadOnly, setIsReadOnly] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
   const [newRecord, setNewRecord] = useState({
     patientId: '',
+    authorId: '',
     proceduresDone: '',
     medicationAdministered: '',
     notes: '',
@@ -22,10 +24,11 @@ export default function EnfermeriaPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [meRes, nRes, pRes] = await Promise.all([
+      const [meRes, nRes, pRes, staffRes] = await Promise.all([
         fetch('/api/auth/me'),
         fetch('/api/nursing'),
         fetch('/api/patients'),
+        fetch('/api/staff?area=ENFERMERIA'),
       ]);
 
       const meData = await meRes.json();
@@ -36,6 +39,9 @@ export default function EnfermeriaPage() {
 
       const pData = await pRes.json();
       setPatients(pData.patients || []);
+
+      const staffData = await staffRes.json();
+      setNurses(staffData.staff || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -64,6 +70,7 @@ export default function EnfermeriaPage() {
       setShowModal(false);
       setNewRecord({
         patientId: '',
+        authorId: '',
         proceduresDone: '',
         medicationAdministered: '',
         notes: '',
@@ -123,7 +130,17 @@ export default function EnfermeriaPage() {
                 </td>
                 <td className="p-4 text-slate-800 font-semibold">{r.medicationAdministered || 'N/A'}</td>
                 <td className="p-4 text-slate-600">{r.proceduresDone || 'N/A'}</td>
-                <td className="p-4 text-slate-500">{r.author?.firstName} {r.author?.lastName}</td>
+                <td className="p-4">
+                  <div className="font-bold text-slate-800">
+                    {r.author?.firstName} {r.author?.lastName}
+                  </div>
+                  {r.author?.matricula && (
+                    <div className="text-[10px] text-slate-500 font-mono">Mat: {r.author.matricula}</div>
+                  )}
+                  {r.author?.shiftHours && (
+                    <div className="text-[10px] text-emerald-600 font-medium">{r.author.shiftHours}</div>
+                  )}
+                </td>
               </tr>
             ))}
             {records.length === 0 && !loading && (
@@ -154,6 +171,24 @@ export default function EnfermeriaPage() {
                   {patients.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.firstName} {p.lastName} (DNI {p.documentNumber})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Enfermero/a a Cargo <span className="text-slate-400 font-normal">(Opcional)</span>
+                </label>
+                <select
+                  value={newRecord.authorId}
+                  onChange={(e) => setNewRecord({ ...newRecord, authorId: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl p-2.5 text-slate-800"
+                >
+                  <option value="">👤 Usuario actual en sesión</option>
+                  {nurses.map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {n.lastName}, {n.firstName} {n.matricula ? `(Mat: ${n.matricula})` : ''} - {n.shiftHours || 'Turno habitual'}
                     </option>
                   ))}
                 </select>

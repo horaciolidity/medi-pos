@@ -30,12 +30,14 @@ export default function PacientesPage() {
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [ehrRecords, setEhrRecords] = useState<any[]>([]);
   const [showEhrModal, setShowEhrModal] = useState(false);
+  const [doctors, setDoctors] = useState<any[]>([]);
   const [newEhr, setNewEhr] = useState({
     reasonForVisit: '',
     symptoms: '',
     diagnosis: '',
     treatmentPlan: '',
     prescribedMedication: '',
+    authorId: '',
   });
 
   // Amendment State
@@ -45,6 +47,16 @@ export default function PacientesPage() {
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const loadDoctors = async () => {
+    try {
+      const res = await fetch('/api/staff?area=MEDICO');
+      const data = await res.json();
+      setDoctors(data.staff || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const loadPatients = async () => {
     setLoading(true);
@@ -65,6 +77,7 @@ export default function PacientesPage() {
 
   useEffect(() => {
     loadPatients();
+    loadDoctors();
   }, [query]);
 
   const handleCreatePatient = async (e: React.FormEvent) => {
@@ -137,6 +150,7 @@ export default function PacientesPage() {
         diagnosis: '',
         treatmentPlan: '',
         prescribedMedication: '',
+        authorId: '',
       });
       openEHR(selectedPatient);
     } catch (err: any) {
@@ -422,6 +436,24 @@ export default function PacientesPage() {
                   </div>
 
                   <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Médico / Profesional Actuante (Opcional - Horario / Turno)
+                    </label>
+                    <select
+                      value={newEhr.authorId}
+                      onChange={(e) => setNewEhr({ ...newEhr, authorId: e.target.value })}
+                      className="w-full border border-slate-300 rounded-xl p-2 bg-white text-xs"
+                    >
+                      <option value="">-- Sin asignar / Usar usuario en sesión --</option>
+                      {doctors.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          Dr./Dra. {d.firstName} {d.lastName} {d.matricula ? `(Mat: ${d.matricula})` : ''} - {d.specialty || 'General'} {d.shiftHours ? `[Turno: ${d.shiftHours}]` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
                     <label className="block font-semibold text-slate-700 mb-1">Indicaciones / Tratamiento</label>
                     <textarea
                       rows={2}
@@ -455,7 +487,17 @@ export default function PacientesPage() {
                       </div>
                       <div className="text-right text-[10px] text-slate-400">
                         <div>{new Date(r.createdAt).toLocaleString()}</div>
-                        <div className="font-semibold text-slate-600">{r.author?.firstName} {r.author?.lastName}</div>
+                        <div className="font-semibold text-slate-700 flex items-center justify-end gap-1 mt-0.5">
+                          <span>Dr./Dra. {r.author?.firstName} {r.author?.lastName}</span>
+                          {r.author?.matricula && (
+                            <span className="bg-sky-100 text-sky-700 px-1.5 py-0.2 rounded font-mono text-[9px]">
+                              Mat: {r.author.matricula}
+                            </span>
+                          )}
+                        </div>
+                        {r.author?.shiftHours && (
+                          <div className="text-[9px] text-sky-600 font-medium">Turno: {r.author.shiftHours}</div>
+                        )}
                       </div>
                     </div>
 

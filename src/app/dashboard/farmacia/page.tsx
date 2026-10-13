@@ -25,15 +25,18 @@ export default function FarmaciaPage() {
   const [adjustType, setAdjustType] = useState('ENTRY');
   const [adjustQty, setAdjustQty] = useState('1');
   const [adjustReason, setAdjustReason] = useState('');
+  const [adjustAuthorId, setAdjustAuthorId] = useState('');
+  const [pharmacyStaff, setPharmacyStaff] = useState<any[]>([]);
 
   const [error, setError] = useState('');
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [meRes, pRes] = await Promise.all([
+      const [meRes, pRes, staffRes] = await Promise.all([
         fetch('/api/auth/me'),
         fetch('/api/pharmacy/products'),
+        fetch('/api/staff?area=FARMACIA'),
       ]);
 
       const meData = await meRes.json();
@@ -41,6 +44,9 @@ export default function FarmaciaPage() {
 
       const pData = await pRes.json();
       setProducts(pData.products || []);
+
+      const staffData = await staffRes.json();
+      setPharmacyStaff(staffData.staff || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -87,6 +93,7 @@ export default function FarmaciaPage() {
           type: adjustType,
           quantity: Number(adjustQty),
           reason: adjustReason,
+          authorId: adjustAuthorId || undefined,
         }),
       });
 
@@ -280,6 +287,24 @@ export default function FarmaciaPage() {
                   <option value="ENTRY">➕ Entrada de Stock</option>
                   <option value="EXIT">➖ Salida / Consumo</option>
                   <option value="ADJUSTMENT">⚙️ Ajuste de Inventario</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Responsable de Farmacia <span className="text-slate-400 font-normal">(Opcional)</span>
+                </label>
+                <select
+                  value={adjustAuthorId}
+                  onChange={(e) => setAdjustAuthorId(e.target.value)}
+                  className="w-full border border-slate-300 rounded-xl p-2.5 text-slate-800"
+                >
+                  <option value="">👤 Usuario actual en sesión</option>
+                  {pharmacyStaff.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.lastName}, {p.firstName} {p.matricula ? `(Mat: ${p.matricula})` : ''} - {p.shiftHours || 'Turno habitual'}
+                    </option>
+                  ))}
                 </select>
               </div>
 
