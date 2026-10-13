@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Users, Stethoscope, HeartPulse, Clock, Package,
-  ShoppingCart, Receipt, Bell, ShieldAlert, CheckCircle2, ArrowRight
+  ShoppingCart, Receipt, Bell, ShieldAlert, CheckCircle2, ArrowRight, Sliders, Printer
 } from 'lucide-react';
 
 export default function DashboardOverviewPage() {
@@ -145,7 +145,7 @@ export default function DashboardOverviewPage() {
       {/* Quick Navigation Modules */}
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-slate-900">Módulos Operativos</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           <Link
             href="/dashboard/pacientes"
             className="bg-white hover:border-sky-500 p-5 rounded-2xl border border-slate-200 shadow-sm transition-all group"
@@ -186,6 +186,20 @@ export default function DashboardOverviewPage() {
             </div>
             <h4 className="font-bold text-slate-900 text-base">Caja & POS</h4>
             <p className="text-xs text-slate-500 mt-1">Apertura/cierre de turnos, arqueo de caja con diferencias y cobro de coseguros.</p>
+          </Link>
+
+          <Link
+            href="/dashboard/configuracion"
+            className="bg-white hover:border-amber-500 p-5 rounded-2xl border border-slate-200 shadow-sm transition-all group"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="bg-amber-50 text-amber-600 p-3 rounded-xl group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                <Printer className="w-6 h-6" />
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
+            </div>
+            <h4 className="font-bold text-slate-900 text-base">Ajustes & Ticket Térmico</h4>
+            <p className="text-xs text-slate-500 mt-1">Datos fiscales de la clínica, encabezados, ancho de papel y diseño de comprobantes.</p>
           </Link>
         </div>
       </div>

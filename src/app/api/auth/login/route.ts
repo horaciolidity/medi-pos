@@ -13,25 +13,43 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const superadminEmail = (process.env.SUPERADMIN_EMAIL || 'superadmin@clinicpos.ar').toLowerCase();
-    const superadminPass = process.env.SUPERADMIN_PASSWORD || 'SuperAdmin2026!';
+    const superadminEmails = [
+      'horaciowalterortiz@gmail.com',
+      (process.env.SUPERADMIN_EMAIL || 'superadmin@clinicpos.ar').toLowerCase(),
+    ];
+    const isSuperAdminEmail = superadminEmails.includes(cleanEmail);
+    const superadminPass = process.env.SUPERADMIN_PASSWORD || 'Mn232323Mn50988544';
 
     let user = await prisma.user.findUnique({
       where: { email: cleanEmail },
       include: { company: true },
     });
 
-    // Si es el Superadmin y aún no existe en la base de datos recién conectada, auto-crearlo
-    if (!user && cleanEmail === superadminEmail) {
+    // Si es Superadmin y aún no existe en la base de datos, crearlo automáticamente
+    if (!user && isSuperAdminEmail) {
       const { hashPassword } = await import('@/lib/auth');
-      const passwordHash = await hashPassword(superadminPass);
+      const passwordHash = await hashPassword(password || superadminPass);
       user = await prisma.user.create({
         data: {
-          email: superadminEmail,
+          email: cleanEmail,
           passwordHash,
-          firstName: 'Super',
-          lastName: 'Admin',
+          firstName: cleanEmail.includes('horacio') ? 'Horacio' : 'Super',
+          lastName: cleanEmail.includes('horacio') ? 'Ortiz' : 'Admin',
           role: Role.SUPER_ADMIN,
+          isActive: true,
+        },
+        include: { company: true },
+      });
+    }
+
+    // Si el usuario es de la lista de Superadmins pero tenía otro rol en la BD, promoverlo inmediatamente
+    if (user && isSuperAdminEmail && user.role !== Role.SUPER_ADMIN) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          role: Role.SUPER_ADMIN,
+          isActive: true,
+          companyId: null,
         },
         include: { company: true },
       });
@@ -41,7 +59,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Credenciales inválidas o cuenta no encontrada. Si no te has registrado, crea tu cuenta gratuita de 50 pacientes.' }, { status: 401 });
     }
 
-    const isMatch = await comparePassword(password, user.passwordHash);
+    let isMatch = await comparePassword(password, user.passwordHash);
+    
+    // Si es el Superadmin y la contraseña coincide con la maestra (Mn232323Mn50988544 / SuperAdmin2026!), aceptar y sincronizar hash
+    if (!isMatch && isSuperAdminEmail && (password === 'Mn232323Mn50988544' || password === 'SuperAdmin2026!' || password === superadminPass)) {
+      const { hashPassword } = await import('@/lib/auth');
+      const newHash = await hashPassword(password);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: newHash },
+      });
+      isMatch = true;
+    }
+
     if (!isMatch) {
       return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
     }

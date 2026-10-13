@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   Activity, Users, FileText, Stethoscope, HeartPulse, Clock,
   Package, ShoppingCart, Receipt, Bell, Download, LogOut,
-  ShieldAlert, Sparkles, Building2, ChevronRight, User as UserIcon
+  ShieldAlert, Sparkles, Building2, ChevronRight, User as UserIcon, Sliders
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -57,13 +57,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const menuItems = [
     { label: 'Visión General', href: '/dashboard', icon: Activity },
     { label: 'Pacientes & H.C.', href: '/dashboard/pacientes', icon: Users },
-    { label: 'Triage Confidencial', href: '/dashboard/triage', icon: Stethoscope },
     { label: 'Enfermería', href: '/dashboard/enfermeria', icon: HeartPulse },
     { label: 'Recepción & Turnos', href: '/dashboard/turnos', icon: Clock },
     { label: 'Farmacia & Insumos', href: '/dashboard/farmacia', icon: Package },
     { label: 'Caja & POS', href: '/dashboard/caja', icon: ShoppingCart },
     { label: 'Facturación (ARCA)', href: '/dashboard/facturacion', icon: Receipt },
     { label: 'Novedades', href: '/dashboard/novedades', icon: Bell },
+    { label: 'Ajustes & Ticket', href: '/dashboard/configuracion', icon: Sliders },
     { label: 'Exportar Datos', href: '/dashboard/exportar', icon: Download },
   ];
 
@@ -240,7 +240,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <ul className="space-y-2 text-xs text-slate-300">
                     <li className="flex items-center gap-2">✓ Pacientes ilimitados</li>
                     <li className="flex items-center gap-2">✓ Historias Clínicas longitudinales</li>
-                    <li className="flex items-center gap-2">✓ Triage confidencial & Enfermería</li>
+                    <li className="flex items-center gap-2">✓ Enfermería & atenciones clínicas</li>
                     <li className="flex items-center gap-2">✓ Farmacia, stock & lotes</li>
                     <li className="flex items-center gap-2">✓ Caja POS & Arqueos</li>
                     <li className="flex items-center gap-2">✓ Exportación Excel, TXT, JSON</li>
