@@ -6,7 +6,8 @@ import Link from 'next/link';
 import {
   Activity, Users, FileText, Stethoscope, HeartPulse, Clock,
   Package, ShoppingCart, Receipt, Bell, Download, LogOut,
-  ShieldAlert, Sparkles, Building2, ChevronRight, User as UserIcon, Sliders, UserCheck
+  ShieldAlert, Sparkles, Building2, ChevronRight, User as UserIcon, Sliders, UserCheck,
+  CalendarDays, Shield
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         const data = await res.json();
         setUser(data.user);
         setSubscription(data.subscription);
+
+        // Si el usuario entra a /dashboard pero su rol no es ADMIN, redirigir a su área de trabajo
+        const r = (data.user?.role || data.user?.area || 'ADMIN').toUpperCase();
+        if (pathname === '/dashboard' && r !== 'ADMIN' && r !== 'SUPER_ADMIN' && data.user?.email !== 'horaciowalterortiz@gmail.com') {
+          if (r === 'MEDICO') router.push('/dashboard/pacientes');
+          else if (r === 'ENFERMERIA') router.push('/dashboard/enfermeria');
+          else if (r === 'RECEPCION') router.push('/dashboard/turnos');
+          else if (r === 'FARMACIA') router.push('/dashboard/farmacia');
+          else if (r === 'CAJA') router.push('/dashboard/caja');
+        }
       } catch (err) {
         router.push('/login');
       } finally {
@@ -36,7 +47,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     }
     loadMe();
-  }, [router]);
+  }, [router, pathname]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -54,19 +65,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  const menuItems = [
-    { label: 'Visión General', href: '/dashboard', icon: Activity },
-    { label: 'Pacientes & H.C.', href: '/dashboard/pacientes', icon: Users },
-    { label: 'Personal & Turnos', href: '/dashboard/personal', icon: UserCheck },
-    { label: 'Enfermería', href: '/dashboard/enfermeria', icon: HeartPulse },
-    { label: 'Recepción & Turnos', href: '/dashboard/turnos', icon: Clock },
-    { label: 'Farmacia & Insumos', href: '/dashboard/farmacia', icon: Package },
-    { label: 'Caja & POS', href: '/dashboard/caja', icon: ShoppingCart },
-    { label: 'Facturación (ARCA)', href: '/dashboard/facturacion', icon: Receipt },
-    { label: 'Novedades', href: '/dashboard/novedades', icon: Bell },
-    { label: 'Ajustes & Ticket', href: '/dashboard/configuracion', icon: Sliders },
-    { label: 'Exportar Datos', href: '/dashboard/exportar', icon: Download },
+  const userRole = (user?.role || user?.area || 'ADMIN').toUpperCase();
+  const isSuperAdmin = userRole === 'SUPER_ADMIN' || user?.email === 'horaciowalterortiz@gmail.com';
+
+  const allMenuItems = [
+    { label: 'Visión General',     href: '/dashboard',                icon: Activity,      roles: ['ADMIN'] },
+    { label: 'Pacientes & H.C.',   href: '/dashboard/pacientes',       icon: Stethoscope,   roles: ['ADMIN', 'MEDICO', 'ENFERMERIA', 'RECEPCION'] },
+    { label: 'Reservas de Turnos', href: '/dashboard/reservas',        icon: CalendarDays,  roles: ['ADMIN', 'MEDICO', 'RECEPCION'] },
+    { label: 'Recepción & Turnero',href: '/dashboard/turnos',          icon: Clock,         roles: ['ADMIN', 'RECEPCION'] },
+    { label: 'Enfermería',         href: '/dashboard/enfermeria',      icon: HeartPulse,    roles: ['ADMIN', 'ENFERMERIA'] },
+    { label: 'Farmacia & Insumos', href: '/dashboard/farmacia',        icon: Package,       roles: ['ADMIN', 'FARMACIA'] },
+    { label: 'Caja & POS',         href: '/dashboard/caja',            icon: ShoppingCart,  roles: ['ADMIN', 'CAJA', 'RECEPCION'] },
+    { label: 'Facturación (ARCA)', href: '/dashboard/facturacion',     icon: Receipt,       roles: ['ADMIN', 'CAJA'] },
+    { label: 'Personal & Accesos', href: '/dashboard/personal',        icon: UserCheck,     roles: ['ADMIN'] },
+    { label: 'Novedades',          href: '/dashboard/novedades',       icon: Bell,          roles: ['ADMIN', 'MEDICO', 'ENFERMERIA', 'RECEPCION'] },
+    { label: 'Ajustes & Ticket',   href: '/dashboard/configuracion',   icon: Sliders,       roles: ['ADMIN'] },
+    { label: 'Exportar Datos',     href: '/dashboard/exportar',        icon: Download,      roles: ['ADMIN'] },
   ];
+
+  const menuItems = allMenuItems.filter(
+    (item) => isSuperAdmin || item.roles.includes(userRole)
+  );
 
   const isReadOnly = subscription?.isReadOnly;
 
@@ -154,6 +173,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Menu Items */}
             <nav className="p-3 space-y-1">
+              {isSuperAdmin && (
+                <Link
+                  href="/superadmin"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all mb-2"
+                >
+                  <Shield className="w-4 h-4 text-amber-400" />
+                  <span>Panel Super Admin</span>
+                </Link>
+              )}
+
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
@@ -184,7 +213,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
                 <div className="overflow-hidden text-xs">
                   <p className="font-bold text-white truncate">{user?.firstName} {user?.lastName}</p>
-                  <p className="text-[10px] text-slate-400 font-mono uppercase">{user?.role}</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-[9px] bg-slate-800 text-sky-400 font-mono uppercase px-1.5 py-0.5 rounded font-bold">
+                      {user?.role || 'USUARIO'}
+                    </span>
+                    {user?.specialty && (
+                      <span className="text-[9px] text-slate-400 truncate max-w-[100px]">
+                        · {user.specialty}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

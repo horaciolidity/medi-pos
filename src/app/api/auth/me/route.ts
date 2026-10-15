@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        area: user.area,
         specialty: user.specialty,
         companyId: user.companyId,
         company: user.company,

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Building2,
   Printer,
@@ -14,7 +15,10 @@ import {
   Sparkles,
   QrCode,
   Sliders,
-  RotateCcw
+  RotateCcw,
+  UserCheck,
+  Lock,
+  ChevronRight
 } from 'lucide-react';
 
 export default function ConfiguracionEmpresaTicketPage() {
@@ -160,6 +164,31 @@ export default function ConfiguracionEmpresaTicketPage() {
           <Printer className="w-4 h-4 text-sky-600" />
           <span>Imprimir Ticket de Prueba</span>
         </button>
+      </div>
+
+      {/* Banner de acceso a Gestión de Personal y Accesos */}
+      <div className="bg-gradient-to-r from-slate-900 to-sky-950 border border-slate-800 p-5 rounded-2xl text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <Lock className="w-3 h-3" /> Cuentas & Accesos
+            </span>
+            <span className="text-xs font-bold text-slate-200">
+              Personal por Área (Médicos, Enfermería, Recepción, Caja)
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 max-w-2xl">
+            Pre-configurá los inicios de sesión con correo y contraseña para tu equipo. Cuando el médico o enfermero inicien sesión en sus puestos o consultorios, verán únicamente los módulos y pacientes correspondientes a su área.
+          </p>
+        </div>
+        <Link
+          href="/dashboard/personal"
+          className="inline-flex items-center gap-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-colors shrink-0 shadow-md shadow-sky-500/20"
+        >
+          <UserCheck className="w-4 h-4" />
+          <span>Gestionar Personal & Roles</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
 
       {successMsg && (
