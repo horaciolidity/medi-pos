@@ -19,7 +19,9 @@ import {
   Mail,
   FileBadge,
   Sparkles,
-  Calendar
+  Calendar,
+  Lock,
+  Key
 } from 'lucide-react';
 
 export default function PersonalTurnosPage() {
@@ -554,27 +556,58 @@ export default function PersonalTurnosPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Email (Opcional)</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="dr.gomez@clinica.com"
-                    className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500"
-                  />
-                  <span className="text-[10px] text-slate-400">Si se deja vacío, se genera automáticamente.</span>
+              {/* Sección Credenciales de Inicio de Sesión */}
+              <div className="bg-sky-50/70 border border-sky-200 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-sky-700" />
+                  <span className="font-bold text-xs text-sky-950">
+                    Credenciales de Acceso a la Plataforma
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Con estos datos el médico, enfermero o recepcionista iniciará sesión en su computadora o tablet y accederá exclusivamente a su área clínica.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Correo / Usuario de Acceso *
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="dr.gomez@clinica.com"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-mono text-xs"
+                    />
+                    <span className="text-[10px] text-slate-400">Si se deja vacío, se generará según su DNI.</span>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      {editingStaff ? 'Nueva Contraseña (Opcional)' : 'Contraseña de Acceso *'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder={editingStaff ? 'Dejar vacío para mantener la actual' : 'Personal2026!'}
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-mono text-xs"
+                    />
+                    <span className="text-[10px] text-slate-400">
+                      {editingStaff ? 'Completar solo si se desea restablecer la clave.' : 'Clave inicial con la que accederá.'}
+                    </span>
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Teléfono (Opcional)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Teléfono Móvil (Opcional)</label>
                   <input
                     type="text"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="011-4555-1234"
-                    className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 text-xs"
                   />
                 </div>
               </div>

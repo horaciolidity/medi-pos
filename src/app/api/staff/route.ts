@@ -209,6 +209,7 @@ export async function PATCH(req: NextRequest) {
       shiftHours,
       workDays,
       isActive,
+      email,
       password,
     } = body;
 
@@ -229,12 +230,21 @@ export async function PATCH(req: NextRequest) {
       passwordHash = await hashPassword(password.trim());
     }
 
+    const cleanEmail = email && email.trim() !== '' ? email.trim().toLowerCase() : undefined;
+    if (cleanEmail && cleanEmail !== existing.email) {
+      const duplicate = await prisma.user.findUnique({ where: { email: cleanEmail } });
+      if (duplicate && duplicate.id !== id) {
+        return NextResponse.json({ error: `El correo ${cleanEmail} ya pertenece a otro usuario` }, { status: 400 });
+      }
+    }
+
     const updated = await prisma.user.update({
       where: { id },
       data: {
         ...(firstName !== undefined && { firstName: firstName.trim() }),
         ...(lastName !== undefined && { lastName: lastName.trim() }),
         ...(dni !== undefined && { dni: dni ? dni.trim() : null }),
+        ...(cleanEmail !== undefined && { email: cleanEmail }),
         ...(area !== undefined && { area: area ? area.toUpperCase() : null }),
         ...(role !== undefined && { role: role ? role.toUpperCase() : undefined }),
         ...(specialty !== undefined && { specialty: specialty ? specialty.trim() : null }),
