@@ -47,6 +47,7 @@ model Company {
   incidents        Incident[]
   auditLogs        AuditLog[]
   subscriptionLogs SubscriptionLog[]
+  appointments     Appointment[]
 }
 
 model Branch {
@@ -188,6 +189,8 @@ model User {
   authoredIncidents Incident[]      @relation("IncidentAuthor")
   assignedIncidents Incident[]      @relation("IncidentAssignee")
   auditLogs         AuditLog[]
+  doctorAppointments  Appointment[] @relation("DoctorAppointments")
+  createdAppointments Appointment[] @relation("AppointmentCreator")
 }
 
 // ----------------------------------------------------
@@ -221,6 +224,7 @@ model Patient {
   nursingRecords  NursingRecord[]
   queueTurnos     QueueTurno[]
   billingInvoices BillingInvoice[]
+  appointments    Appointment[]
 
   @@unique([companyId, documentNumber])
 }
@@ -505,3 +509,33 @@ model AuditLog {
   company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
   user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
+
+// ----------------------------------------------------
+// 12. RESERVAS / CITAS PROGRAMADAS
+// ----------------------------------------------------
+
+model Appointment {
+  id            String   @id @default(uuid())
+  companyId     String
+  patientId     String?  // null si es un turno anónimo (reserva sin paciente registrado)
+  doctorId      String?  // User con role MEDICO
+  date          DateTime // Fecha y hora del turno
+  durationMins  Int      @default(20)
+  specialty     String?  // Ej: "Clínica Médica"
+  reason        String?  // Motivo de consulta
+  status        String   @default("PENDING") // PENDING | CONFIRMED | ATTENDED | CANCELLED | NO_SHOW
+  notes         String?  // Notas internas
+  // Datos si el paciente no está aún registrado:
+  guestName     String?
+  guestPhone    String?
+  guestEmail    String?
+  createdById   String?  // quien reservó (recepcionista, admin, o el mismo médico)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  patient   Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  doctor    User?    @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: SetNull)
+  createdBy User?    @relation("AppointmentCreator", fields: [createdById], references: [id], onDelete: SetNull)
+}
+

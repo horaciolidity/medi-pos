@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
       path: '/',
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24, // 24 horas
+      maxAge: 60 * 60 * 24 * 7, // 7 días — persiste entre recargas
     });
 
     return response;

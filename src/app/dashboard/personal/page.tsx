@@ -80,7 +80,7 @@ export default function PersonalTurnosPage() {
       specialty: '',
       matricula: '',
       phone: '',
-      shiftHours: 'Mañana (08:00 - 14:00)',
+      shiftHours: '',
       workDays: 'Lunes a Viernes',
       email: '',
       password: '',
@@ -100,8 +100,8 @@ export default function PersonalTurnosPage() {
       specialty: item.specialty || '',
       matricula: item.matricula || '',
       phone: item.phone || '',
-      shiftHours: item.shiftHours || 'Mañana (08:00 - 14:00)',
-      workDays: item.workDays || 'Lunes a Viernes',
+      shiftHours: item.shiftHours || '',
+      workDays: item.workDays || '',
       email: item.email || '',
       password: '',
     });
@@ -532,17 +532,14 @@ export default function PersonalTurnosPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Horario / Turno de Trabajo</label>
-                  <select
+                  <input
+                    type="text"
                     value={formData.shiftHours}
                     onChange={(e) => setFormData({ ...formData, shiftHours: e.target.value })}
+                    placeholder="Ej: Lunes 08:00-14:00 / Guardia noche 20:00-08:00"
                     className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-medium"
-                  >
-                    <option value="Mañana (08:00 - 14:00)">Mañana (08:00 - 14:00)</option>
-                    <option value="Tarde (14:00 - 20:00)">Tarde (14:00 - 20:00)</option>
-                    <option value="Noche / Guardia (20:00 - 08:00)">Noche / Guardia (20:00 - 08:00)</option>
-                    <option value="Horario Corrido (09:00 - 18:00)">Horario Corrido (09:00 - 18:00)</option>
-                    <option value="Guardia 24 Horas">Guardia 24 Horas</option>
-                  </select>
+                  />
+                  <span className="text-[10px] text-slate-400">Escribí el horario exacto de tu clínica, sin restricciones de formato.</span>
                 </div>
 
                 <div>
