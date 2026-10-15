@@ -25,6 +25,10 @@ export async function GET(req: NextRequest) {
         ticketHeader: true,
         ticketFooter: true,
         ticketConfigJson: true,
+        slug: true,
+        onlineBookingEnabled: true,
+        onlineServicesJson: true,
+        whatsappConfigJson: true,
         createdAt: true,
       },
     });
@@ -60,6 +64,10 @@ export async function PATCH(req: NextRequest) {
       ticketHeader,
       ticketFooter,
       ticketConfigJson,
+      slug,
+      onlineBookingEnabled,
+      onlineServicesJson,
+      whatsappConfigJson,
     } = body;
 
     const updatedCompany = await prisma.company.update({
@@ -77,6 +85,14 @@ export async function PATCH(req: NextRequest) {
         ...(ticketFooter !== undefined && { ticketFooter: ticketFooter || null }),
         ...(ticketConfigJson !== undefined && {
           ticketConfigJson: typeof ticketConfigJson === 'string' ? ticketConfigJson : JSON.stringify(ticketConfigJson),
+        }),
+        ...(slug !== undefined && { slug: slug ? slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-') : null }),
+        ...(onlineBookingEnabled !== undefined && { onlineBookingEnabled: Boolean(onlineBookingEnabled) }),
+        ...(onlineServicesJson !== undefined && {
+          onlineServicesJson: typeof onlineServicesJson === 'string' ? onlineServicesJson : JSON.stringify(onlineServicesJson),
+        }),
+        ...(whatsappConfigJson !== undefined && {
+          whatsappConfigJson: typeof whatsappConfigJson === 'string' ? whatsappConfigJson : JSON.stringify(whatsappConfigJson),
         }),
       },
     });

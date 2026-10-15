@@ -9,6 +9,7 @@ import {
   ShieldAlert, Sparkles, Building2, ChevronRight, User as UserIcon, Sliders, UserCheck,
   CalendarDays, Shield
 } from 'lucide-react';
+import NavigationTutorial from '@/components/NavigationTutorial';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -241,6 +242,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+
+      {/* Tutorial Interactivo y Guía de Navegación */}
+      <NavigationTutorial userRole={user?.role} userName={user?.firstName} />
 
       {/* Modal de Selección de Planes Comerciales */}
       {showPlansModal && (

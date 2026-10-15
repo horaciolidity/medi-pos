@@ -25,6 +25,10 @@ model Company {
   ticketHeader     String?
   ticketFooter     String?
   ticketConfigJson String?  @default("{}")
+  slug             String?  @unique
+  onlineBookingEnabled Boolean @default(true)
+  onlineServicesJson   String? @default("[]")
+  whatsappConfigJson   String? @default("{}")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -529,7 +533,14 @@ model Appointment {
   guestName     String?
   guestPhone    String?
   guestEmail    String?
-  createdById   String?  // quien reservó (recepcionista, admin, o el mismo médico)
+  guestDni      String?
+  guestInsurance String?
+  serviceName   String?
+  hasCoseguro   Boolean  @default(false)
+  coseguroAmount Float?  @default(0)
+  isOnlineBooking Boolean @default(false)
+  whatsappSent  Boolean  @default(false)
+  createdById   String?  // quien reservó (recepcionista, admin, o el mismo médico o null si fue online)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
