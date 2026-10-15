@@ -295,18 +295,18 @@ export default function PacientesPage() {
       {/* Contacto */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-slate-600 font-semibold mb-1 flex items-center gap-1"><Phone className="w-3 h-3"/>Teléfono</label>
+          <label className="text-slate-600 font-semibold mb-1 flex items-center gap-1"><Phone className="w-3 h-3"/>Teléfono</label>
           <input type="tel" value={patientForm.phone} onChange={(e) => setPatientForm({ ...patientForm, phone: e.target.value })} placeholder="+54 11 1234-5678" className="w-full border border-slate-300 rounded-xl p-2" />
         </div>
         <div>
-          <label className="block text-slate-600 font-semibold mb-1 flex items-center gap-1"><Mail className="w-3 h-3"/>Correo (opcional)</label>
+          <label className="text-slate-600 font-semibold mb-1 flex items-center gap-1"><Mail className="w-3 h-3"/>Correo (opcional)</label>
           <input type="email" value={patientForm.email} onChange={(e) => setPatientForm({ ...patientForm, email: e.target.value })} placeholder="paciente@email.com" className="w-full border border-slate-300 rounded-xl p-2" />
         </div>
       </div>
 
       {/* Dirección */}
       <div>
-        <label className="block text-slate-600 font-semibold mb-1 flex items-center gap-1"><MapPin className="w-3 h-3"/>Domicilio</label>
+        <label className="text-slate-600 font-semibold mb-1 flex items-center gap-1"><MapPin className="w-3 h-3"/>Domicilio</label>
         <input type="text" value={patientForm.address} onChange={(e) => setPatientForm({ ...patientForm, address: e.target.value })} placeholder="Av. Corrientes 1234, CABA" className="w-full border border-slate-300 rounded-xl p-2" />
       </div>
 
