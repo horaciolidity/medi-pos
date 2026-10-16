@@ -21,7 +21,8 @@ import {
   Sparkles,
   Calendar,
   Lock,
-  Key
+  Key,
+  X
 } from 'lucide-react';
 
 export default function PersonalTurnosPage() {
@@ -438,194 +439,210 @@ export default function PersonalTurnosPage() {
 
       {/* Modal Registrar / Editar Personal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="border-b border-slate-100 pb-3">
-              <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wider block">
-                {editingStaff ? 'Actualizar Ficha de Personal' : 'Nuevo Miembro del Equipo'}
-              </span>
-              <h3 className="text-lg font-black text-slate-900">
-                {editingStaff ? `${editingStaff.firstName} ${editingStaff.lastName}` : 'Registrar Profesional o Personal'}
-              </h3>
-              <p className="text-xs text-slate-400">
-                Podrás asociar este profesional opcionalmente a las atenciones, signos vitales o movimientos de farmacia.
-              </p>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col relative overflow-hidden">
+            {/* Header Fijo con botón X bien visible */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/70 shrink-0">
+              <div>
+                <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wider block">
+                  {editingStaff ? 'Actualizar Ficha de Personal' : 'Nuevo Miembro del Equipo'}
+                </span>
+                <h3 className="text-base sm:text-lg font-black text-slate-900">
+                  {editingStaff ? `${editingStaff.firstName} ${editingStaff.lastName}` : 'Registrar Profesional o Personal'}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Definí los datos del profesional y sus credenciales de acceso individual.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 transition-colors shrink-0 ml-3 shadow-sm"
+                title="Cerrar ventana"
+                aria-label="Cerrar ventana"
+              >
+                <X className="w-5 h-5 stroke-[2.5]" />
+              </button>
             </div>
 
-            <form onSubmit={handleSaveStaff} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Nombre *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    placeholder="Ej: Carlos"
-                    className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-medium"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Apellido *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    placeholder="Ej: Gómez"
-                    className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-medium"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Área / Rol *</label>
-                  <select
-                    value={formData.area}
-                    onChange={(e) => setFormData({ ...formData, area: e.target.value, role: e.target.value })}
-                    className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-sky-500"
-                  >
-                    <option value="MEDICO">🩺 Médico / Especialista</option>
-                    <option value="ENFERMERIA">💉 Enfermería / Cuidados</option>
-                    <option value="FARMACIA">💊 Farmacia / Control Stock</option>
-                    <option value="RECEPCION">🛎️ Recepción / Admisión</option>
-                    <option value="ADMIN">💼 Administración / Facturación</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">DNI</label>
-                  <input
-                    type="text"
-                    value={formData.dni}
-                    onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
-                    placeholder="Ej: 32.845.119"
-                    className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Especialidad Clínica</label>
-                  <input
-                    type="text"
-                    value={formData.specialty}
-                    onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
-                    placeholder="Ej: Clínica Médica / Pediatría"
-                    className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Matrícula Profesional (MN / MP)</label>
-                  <input
-                    type="text"
-                    value={formData.matricula}
-                    onChange={(e) => setFormData({ ...formData, matricula: e.target.value })}
-                    placeholder="Ej: MP 48920 / MN 11284"
-                    className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Horario / Turno de Trabajo</label>
-                  <input
-                    type="text"
-                    value={formData.shiftHours}
-                    onChange={(e) => setFormData({ ...formData, shiftHours: e.target.value })}
-                    placeholder="Ej: Lunes 08:00-14:00 / Guardia noche 20:00-08:00"
-                    className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-medium"
-                  />
-                  <span className="text-[10px] text-slate-400">Escribí el horario exacto de tu clínica, sin restricciones de formato.</span>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Días de Atención / Guardia</label>
-                  <input
-                    type="text"
-                    value={formData.workDays}
-                    onChange={(e) => setFormData({ ...formData, workDays: e.target.value })}
-                    placeholder="Ej: Lunes a Viernes / Martes y Jueves"
-                    className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-              </div>
-
-              {/* Sección Credenciales de Inicio de Sesión */}
-              <div className="bg-sky-50/70 border border-sky-200 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-sky-700" />
-                  <span className="font-bold text-xs text-sky-950">
-                    Credenciales de Acceso a la Plataforma
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500">
-                  Con estos datos el médico, enfermero o recepcionista iniciará sesión en su computadora o tablet y accederá exclusivamente a su área clínica.
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Formulario: cuerpo con scroll interno y footer fijo */}
+            <form onSubmit={handleSaveStaff} className="flex flex-col flex-1 overflow-hidden min-h-0">
+              <div className="space-y-4 text-xs overflow-y-auto flex-1 px-6 py-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Correo / Usuario de Acceso *
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="dr.gomez@clinica.com"
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-mono text-xs"
-                    />
-                    <span className="text-[10px] text-slate-400">Si se deja vacío, se generará según su DNI.</span>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      {editingStaff ? 'Nueva Contraseña (Opcional)' : 'Contraseña de Acceso *'}
-                    </label>
+                    <label className="block font-semibold text-slate-700 mb-1">Nombre *</label>
                     <input
                       type="text"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder={editingStaff ? 'Dejar vacío para mantener la actual' : 'Personal2026!'}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-mono text-xs"
+                      required
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      placeholder="Ej: Carlos"
+                      className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-medium"
                     />
-                    <span className="text-[10px] text-slate-400">
-                      {editingStaff ? 'Completar solo si se desea restablecer la clave.' : 'Clave inicial con la que accederá.'}
-                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Apellido *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      placeholder="Ej: Gómez"
+                      className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-medium"
+                    />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Teléfono Móvil (Opcional)</label>
-                  <input
-                    type="text"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="011-4555-1234"
-                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 text-xs"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Área / Rol *</label>
+                    <select
+                      value={formData.area}
+                      onChange={(e) => setFormData({ ...formData, area: e.target.value, role: e.target.value })}
+                      className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none focus:border-sky-500"
+                    >
+                      <option value="MEDICO">🩺 Médico / Especialista</option>
+                      <option value="ENFERMERIA">💉 Enfermería / Cuidados</option>
+                      <option value="FARMACIA">💊 Farmacia / Control Stock</option>
+                      <option value="RECEPCION">🛎️ Recepción / Admisión</option>
+                      <option value="ADMIN">💼 Administración / Facturación</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">DNI</label>
+                    <input
+                      type="text"
+                      value={formData.dni}
+                      onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
+                      placeholder="Ej: 32.845.119"
+                      className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Especialidad Clínica</label>
+                    <input
+                      type="text"
+                      value={formData.specialty}
+                      onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
+                      placeholder="Ej: Clínica Médica / Pediatría"
+                      className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Matrícula Profesional (MN / MP)</label>
+                    <input
+                      type="text"
+                      value={formData.matricula}
+                      onChange={(e) => setFormData({ ...formData, matricula: e.target.value })}
+                      placeholder="Ej: MP 48920 / MN 11284"
+                      className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Horario / Turno de Trabajo</label>
+                    <input
+                      type="text"
+                      value={formData.shiftHours}
+                      onChange={(e) => setFormData({ ...formData, shiftHours: e.target.value })}
+                      placeholder="Ej: Lunes 08:00-14:00 / Guardia noche 20:00-08:00"
+                      className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-medium"
+                    />
+                    <span className="text-[10px] text-slate-400">Escribí el horario exacto de tu clínica, sin restricciones de formato.</span>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Días de Atención / Guardia</label>
+                    <input
+                      type="text"
+                      value={formData.workDays}
+                      onChange={(e) => setFormData({ ...formData, workDays: e.target.value })}
+                      placeholder="Ej: Lunes a Viernes / Martes y Jueves"
+                      className="w-full border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Sección Credenciales de Inicio de Sesión */}
+                <div className="bg-sky-50/70 border border-sky-200 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-sky-700" />
+                    <span className="font-bold text-xs text-sky-950">
+                      Credenciales de Acceso a la Plataforma
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Con estos datos el médico, enfermero o recepcionista iniciará sesión en su computadora o tablet y accederá exclusivamente a su área clínica.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">
+                        Correo / Usuario de Acceso *
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="dr.gomez@clinica.com"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-mono text-xs"
+                      />
+                      <span className="text-[10px] text-slate-400">Si se deja vacío, se generará según su DNI.</span>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">
+                        {editingStaff ? 'Nueva Contraseña (Opcional)' : 'Contraseña de Acceso *'}
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        placeholder={editingStaff ? 'Dejar vacío para mantener la actual' : 'Personal2026!'}
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 font-mono text-xs"
+                      />
+                      <span className="text-[10px] text-slate-400">
+                        {editingStaff ? 'Completar solo si se desea restablecer la clave.' : 'Clave inicial con la que accederá.'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Teléfono Móvil (Opcional)</label>
+                    <input
+                      type="text"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="011-4555-1234"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500 text-xs"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              {/* Footer Fijo con Botones SIEMPRE Visibles */}
+              <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors"
+                  className="px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-bold transition-colors text-xs"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold shadow-lg shadow-sky-600/20 transition-all disabled:opacity-50"
+                  className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold shadow-lg shadow-sky-600/20 transition-all disabled:opacity-50 text-xs flex items-center gap-1.5"
                 >
-                  {saving ? 'Guardando...' : 'Guardar Personal'}
+                  {saving ? 'Guardando...' : (editingStaff ? 'Actualizar Personal' : 'Guardar Personal')}
                 </button>
               </div>
             </form>

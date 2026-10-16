@@ -8,6 +8,36 @@ import {
   WhatsAppConfig
 } from '@/lib/whatsapp';
 
+const DEFAULT_ONLINE_SERVICES = [
+  {
+    id: 'serv-1',
+    name: 'Consulta Médica General',
+    specialty: 'Clínica Médica',
+    requiresCoseguro: false,
+    coseguroAmount: 0,
+    durationMins: 20,
+    description: 'Control de rutina, chequeo clínico y prescripción de recetas',
+  },
+  {
+    id: 'serv-2',
+    name: 'Pediatría',
+    specialty: 'Pediatría',
+    requiresCoseguro: true,
+    coseguroAmount: 2500,
+    durationMins: 30,
+    description: 'Atención integral para bebés, niños y adolescentes',
+  },
+  {
+    id: 'serv-3',
+    name: 'Cardiología & ECG',
+    specialty: 'Cardiología',
+    requiresCoseguro: true,
+    coseguroAmount: 4000,
+    durationMins: 30,
+    description: 'Evaluación cardiológica y apto físico',
+  },
+];
+
 // GET /api/turnos-online — Información pública para la reserva online del paciente
 export async function GET(req: NextRequest) {
   try {
@@ -17,73 +47,74 @@ export async function GET(req: NextRequest) {
     const dateStr = searchParams.get('date'); // YYYY-MM-DD
     const doctorId = searchParams.get('doctorId');
 
-    // Buscar empresa
+    const cleanSlug = slug && slug !== 'undefined' && slug !== 'null' && slug.trim() !== '' ? slug.trim() : null;
+    const cleanCompanyId = companyId && companyId !== 'undefined' && companyId !== 'null' && companyId.trim() !== '' ? companyId.trim() : null;
+
+    // Buscar empresa por slug o id
     let company: any = null;
-    if (slug) {
-      company = await (prisma as any).company.findUnique({
-        where: { slug },
+    if (cleanSlug) {
+      company = await (prisma as any).company.findFirst({
+        where: {
+          OR: [
+            { slug: cleanSlug },
+            { id: cleanSlug },
+          ],
+        },
       });
-    } else if (companyId) {
-      company = await (prisma as any).company.findUnique({
-        where: { id: companyId },
+    }
+
+    if (!company && cleanCompanyId) {
+      company = await (prisma as any).company.findFirst({
+        where: {
+          OR: [
+            { id: cleanCompanyId },
+            { slug: cleanCompanyId },
+          ],
+        },
       });
-    } else {
+    }
+
+    if (!company) {
       // Fallback: primera empresa activa
       company = await (prisma as any).company.findFirst();
     }
 
     if (!company) {
-      return NextResponse.json({ error: 'Clínica o centro médico no encontrado' }, { status: 404 });
-    }
-
-    if (company.onlineBookingEnabled === false) {
       return NextResponse.json({
-        error: 'Las reservas de turnos online se encuentran momentáneamente deshabilitadas para este centro.',
-        companyName: company.name,
-      }, { status: 403 });
+        success: true,
+        company: {
+          id: 'default',
+          slug: 'clinica',
+          name: 'Centro Médico',
+          logoUrl: null,
+          address: '',
+          phone: '',
+          email: '',
+        },
+        services: DEFAULT_ONLINE_SERVICES,
+        doctors: [],
+        occupiedSlots: [],
+      });
     }
 
     // Parsear servicios configurados
     let services = [];
     if (company.onlineServicesJson) {
       try {
-        services = JSON.parse(company.onlineServicesJson);
+        const parsed = typeof company.onlineServicesJson === 'string'
+          ? JSON.parse(company.onlineServicesJson)
+          : company.onlineServicesJson;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          services = parsed;
+        }
       } catch (e) {
         services = [];
       }
     }
 
-    // Si aún no configuró servicios, proveer servicios predeterminados
+    // Si aún no configuró servicios, proveer los 3 servicios predeterminados
     if (!services || services.length === 0) {
-      services = [
-        {
-          id: 'serv-1',
-          name: 'Consulta Médica General',
-          specialty: 'Clínica Médica',
-          requiresCoseguro: false,
-          coseguroAmount: 0,
-          durationMins: 20,
-          description: 'Control de rutina, chequeo clínico y prescripción de recetas',
-        },
-        {
-          id: 'serv-2',
-          name: 'Pediatría',
-          specialty: 'Pediatría',
-          requiresCoseguro: true,
-          coseguroAmount: 2500,
-          durationMins: 30,
-          description: 'Atención integral para bebés, niños y adolescentes',
-        },
-        {
-          id: 'serv-3',
-          name: 'Cardiología & ECG',
-          specialty: 'Cardiología',
-          requiresCoseguro: true,
-          coseguroAmount: 4000,
-          durationMins: 30,
-          description: 'Evaluación cardiológica y apto físico',
-        },
-      ];
+      services = DEFAULT_ONLINE_SERVICES;
     }
 
     // Médicos disponibles
@@ -191,13 +222,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'La fecha y horario del turno son obligatorios' }, { status: 400 });
     }
 
-    // Resolver empresa
+    // Resolver empresa por ID o slug
+    const cleanCompanyId = companyId && companyId !== 'undefined' && companyId !== 'null' && String(companyId).trim() !== '' ? String(companyId).trim() : null;
+    const cleanSlug = slug && slug !== 'undefined' && slug !== 'null' && String(slug).trim() !== '' ? String(slug).trim() : null;
+
     let company: any = null;
-    if (companyId) {
-      company = await (prisma as any).company.findUnique({ where: { id: companyId } });
-    } else if (slug) {
-      company = await (prisma as any).company.findUnique({ where: { slug } });
-    } else {
+    if (cleanCompanyId) {
+      company = await (prisma as any).company.findFirst({
+        where: { OR: [{ id: cleanCompanyId }, { slug: cleanCompanyId }] },
+      });
+    }
+    if (!company && cleanSlug) {
+      company = await (prisma as any).company.findFirst({
+        where: { OR: [{ slug: cleanSlug }, { id: cleanSlug }] },
+      });
+    }
+    if (!company) {
       company = await (prisma as any).company.findFirst();
     }
 
