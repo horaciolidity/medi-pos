@@ -12,9 +12,10 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const doctorId = searchParams.get('doctorId');
-    const dateStr  = searchParams.get('date'); // YYYY-MM-DD
-    const status   = searchParams.get('status');
+    const doctorId   = searchParams.get('doctorId');
+    const dateStr    = searchParams.get('date'); // YYYY-MM-DD
+    const status     = searchParams.get('status');
+    const onlineOnly = searchParams.get('onlineOnly') === 'true';
 
     let dateFilter: any = {};
     if (dateStr) {
@@ -26,8 +27,9 @@ export async function GET(req: NextRequest) {
     const appointments = await (prisma as any).appointment.findMany({
       where: {
         companyId: session.companyId,
-        ...(doctorId ? { doctorId } : {}),
-        ...(status   ? { status }   : {}),
+        ...(doctorId   ? { doctorId }              : {}),
+        ...(status     ? { status }                : {}),
+        ...(onlineOnly ? { isOnlineBooking: true } : {}),
         ...dateFilter,
       },
       include: {

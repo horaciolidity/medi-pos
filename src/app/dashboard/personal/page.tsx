@@ -439,10 +439,15 @@ export default function PersonalTurnosPage() {
 
       {/* Modal Registrar / Editar Personal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col relative overflow-hidden">
-            {/* Header Fijo con botón X bien visible */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/70 shrink-0">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowModal(false);
+          }}
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-[100] overflow-y-auto p-3 sm:p-6 flex justify-center items-start sm:items-center"
+        >
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 my-auto flex flex-col relative max-h-[calc(100vh-3rem)] overflow-hidden">
+            {/* Header Fijo con botón X bien visible y contrastado */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 shrink-0">
               <div>
                 <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wider block">
                   {editingStaff ? 'Actualizar Ficha de Personal' : 'Nuevo Miembro del Equipo'}
@@ -450,15 +455,15 @@ export default function PersonalTurnosPage() {
                 <h3 className="text-base sm:text-lg font-black text-slate-900">
                   {editingStaff ? `${editingStaff.firstName} ${editingStaff.lastName}` : 'Registrar Profesional o Personal'}
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500">
                   Definí los datos del profesional y sus credenciales de acceso individual.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 transition-colors shrink-0 ml-3 shadow-sm"
-                title="Cerrar ventana"
+                className="w-10 h-10 rounded-2xl flex items-center justify-center bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-200 hover:border-rose-500 transition-all shrink-0 ml-3 shadow-sm cursor-pointer"
+                title="Cerrar ventana (Esc)"
                 aria-label="Cerrar ventana"
               >
                 <X className="w-5 h-5 stroke-[2.5]" />
@@ -629,20 +634,21 @@ export default function PersonalTurnosPage() {
               </div>
 
               {/* Footer Fijo con Botones SIEMPRE Visibles */}
-              <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
+              <div className="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-end gap-3 shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-bold transition-colors text-xs"
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors text-xs cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold shadow-lg shadow-sky-600/20 transition-all disabled:opacity-50 text-xs flex items-center gap-1.5"
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black shadow-lg shadow-emerald-600/25 transition-all disabled:opacity-50 text-xs flex items-center gap-2 cursor-pointer"
                 >
-                  {saving ? 'Guardando...' : (editingStaff ? 'Actualizar Personal' : 'Guardar Personal')}
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{saving ? 'Guardando...' : (editingStaff ? 'Guardar Cambios de Personal' : 'Guardar y Habilitar Acceso')}</span>
                 </button>
               </div>
             </form>

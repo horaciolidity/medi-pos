@@ -48,8 +48,14 @@ export default function ConfiguracionEmpresaTicketPage() {
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [activeTab, setActiveTab] = useState<'EMPRESA_TICKET' | 'TURNOS_WHATSAPP'>('EMPRESA_TICKET');
+  const [activeTab, setActiveTab] = useState<'EMPRESA_TICKET' | 'TURNOS_WHATSAPP' | 'BOXES'>('EMPRESA_TICKET');
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Boxes / Consultorios
+  const [boxes, setBoxes] = useState<any[]>([]);
+  const [newBoxName, setNewBoxName] = useState('');
+  const [newBoxCode, setNewBoxCode] = useState('');
+  const [savingBox, setSavingBox] = useState(false);
 
   // Datos Empresa
   const [company, setCompany] = useState({
@@ -198,7 +204,52 @@ export default function ConfiguracionEmpresaTicketPage() {
     }
 
     loadCompanySettings();
+    loadBoxes();
   }, []);
+
+  const loadBoxes = async () => {
+    try {
+      const res = await fetch('/api/company/boxes');
+      if (res.ok) {
+        const data = await res.json();
+        setBoxes(data.boxes || []);
+      }
+    } catch (e) {}
+  };
+
+  const handleAddBox = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBoxName.trim() || !newBoxCode.trim()) return;
+    setSavingBox(true);
+    try {
+      const res = await fetch('/api/company/boxes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newBoxName.trim(), code: newBoxCode.trim().toUpperCase() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al crear el box');
+      setNewBoxName('');
+      setNewBoxCode('');
+      loadBoxes();
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
+      setSavingBox(false);
+    }
+  };
+
+  const handleDeleteBox = async (id: string) => {
+    if (!confirm('¿Eliminar este box/consultorio?')) return;
+    try {
+      const res = await fetch('/api/company/boxes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) loadBoxes();
+    } catch (e) {}
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -381,6 +432,19 @@ export default function ConfiguracionEmpresaTicketPage() {
         >
           <MessageCircle className="w-4 h-4 text-emerald-600" />
           <span>Turnos Online para Pacientes & WhatsApp</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('BOXES')}
+          className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'BOXES'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Stethoscope className="w-4 h-4 text-purple-600" />
+          <span>Boxes & Consultorios</span>
         </button>
       </div>
 
@@ -1023,6 +1087,119 @@ export default function ConfiguracionEmpresaTicketPage() {
             </button>
           </div>
         </form>
+      )}
+
+      {/* TAB 3: BOXES / CONSULTORIOS */}
+      {activeTab === 'BOXES' && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-purple-950 to-slate-900 border border-purple-800/40 p-6 rounded-3xl text-white shadow-xl">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-purple-500/20 rounded-xl">
+                <Stethoscope className="w-5 h-5 text-purple-300" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black">Boxes y Consultorios</h2>
+                <p className="text-xs text-slate-400">
+                  Configurá los consultorios, boxes de enfermería, laboratorio y demás áreas de atención. Luego podrás llamar pacientes a cada box desde el Turnero.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Agregar nuevo box */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <h3 className="font-black text-slate-900 text-base mb-4 flex items-center gap-2">
+              <Plus className="w-5 h-5 text-purple-600" /> Agregar Box / Consultorio
+            </h3>
+            <form onSubmit={handleAddBox} className="flex flex-col sm:flex-row gap-3 text-xs">
+              <div className="flex-1">
+                <label className="block font-semibold text-slate-700 mb-1">Nombre del Box *</label>
+                <input
+                  type="text"
+                  required
+                  value={newBoxName}
+                  onChange={(e) => setNewBoxName(e.target.value)}
+                  placeholder="Ej: Consultorio 1, Box Enfermería, Laboratorio..."
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-medium focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div className="sm:w-40">
+                <label className="block font-semibold text-slate-700 mb-1">Código Corto *</label>
+                <input
+                  type="text"
+                  required
+                  maxLength={8}
+                  value={newBoxCode}
+                  onChange={(e) => setNewBoxCode(e.target.value.toUpperCase())}
+                  placeholder="Ej: BOX-1"
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-slate-800 font-mono font-bold uppercase focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  disabled={savingBox}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition-colors shadow-lg shadow-purple-600/20 flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  {savingBox ? 'Guardando...' : 'Agregar Box'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Lista de boxes existentes */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <h3 className="font-black text-slate-900 text-base mb-4">
+              Boxes Configurados ({boxes.length})
+            </h3>
+            {boxes.length === 0 ? (
+              <div className="text-center py-12 space-y-3">
+                <div className="bg-slate-100 text-slate-400 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto">
+                  <Stethoscope className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-bold text-slate-500">No hay boxes configurados</p>
+                <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                  Agregá el primer box usando el formulario de arriba. Los boxes aparecerán en el Turnero para que la recepción pueda llamar a los pacientes.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {boxes.map((box: any) => (
+                  <div key={box.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between hover:border-purple-300 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-purple-100 text-purple-700 p-2.5 rounded-xl">
+                        <Stethoscope className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">{box.name}</p>
+                        <p className="font-mono text-xs text-purple-600 font-bold">{box.code}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteBox(box.id)}
+                      className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-colors"
+                      title="Eliminar box"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Info: cómo se usan los boxes */}
+          <div className="bg-sky-50 border border-sky-200 p-5 rounded-2xl text-xs text-sky-900 flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-sky-500 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold">¿Cómo se usan los boxes?</p>
+              <p>En la pantalla de <strong>Recepción &amp; Turnero</strong>, cuando querés llamar a un paciente a consulta, seleccionás el box de destino y el sistema lo muestra en la <strong>Pantalla Pública</strong> con el código de turno.</p>
+              <p className="text-sky-700">Ejemplos de boxes útiles: <em>Consultorio 1, Consultorio 2, Box Enfermería, Sala de Espera, Laboratorio, ECG, Farmacia.</em></p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

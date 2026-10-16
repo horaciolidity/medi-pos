@@ -409,3 +409,64 @@ VALUES
   (gen_random_uuid()::text, 'FREE', 'Prueba Gratuita', 'Hasta 50 ingresos de pacientes sin costo ni tarjeta de credito.', 0, false, '["Hasta 50 pacientes","Historia Clinica","Caja POS","Soporte por email"]', true, CURRENT_TIMESTAMP),
   (gen_random_uuid()::text, 'PRO', 'Plan Pro', 'Todo el Plan Estandar mas Turnero Avanzado con pantalla publica.', 24900, true, '["Todo del Estandar","Turnero Avanzado","Pantalla de Llamados","Tickets Termicos","Boxes Configurables"]', true, CURRENT_TIMESTAMP)
 ON CONFLICT ("code") DO NOTHING;
+
+-- ============================================================
+-- TABLA DE CITAS / RESERVAS ONLINE Y PRESENCIALES
+-- ============================================================
+CREATE TABLE IF NOT EXISTS "Appointment" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
+    "companyId" TEXT NOT NULL,
+    "patientId" TEXT,
+    "doctorId" TEXT,
+    "date" TIMESTAMP(3) NOT NULL,
+    "durationMins" INTEGER NOT NULL DEFAULT 20,
+    "specialty" TEXT,
+    "reason" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "notes" TEXT,
+    "guestName" TEXT,
+    "guestPhone" TEXT,
+    "guestEmail" TEXT,
+    "guestDni" TEXT,
+    "guestInsurance" TEXT,
+    "serviceName" TEXT,
+    "hasCoseguro" BOOLEAN NOT NULL DEFAULT false,
+    "coseguroAmount" DOUBLE PRECISION DEFAULT 0,
+    "isOnlineBooking" BOOLEAN NOT NULL DEFAULT false,
+    "whatsappSent" BOOLEAN NOT NULL DEFAULT false,
+    "createdById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Appointment_pkey" PRIMARY KEY ("id")
+);
+
+-- LLAVES FORÁNEAS APPOINTMENT
+ALTER TABLE "Appointment" DROP CONSTRAINT IF EXISTS "Appointment_companyId_fkey";
+ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "Appointment" DROP CONSTRAINT IF EXISTS "Appointment_patientId_fkey";
+ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "Patient"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE "Appointment" DROP CONSTRAINT IF EXISTS "Appointment_doctorId_fkey";
+ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_doctorId_fkey" FOREIGN KEY ("doctorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE "Appointment" DROP CONSTRAINT IF EXISTS "Appointment_createdById_fkey";
+ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- COLUMNAS ADICIONALES EN COMPANY
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "ticketHeader" TEXT;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "ticketFooter" TEXT;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "ticketConfigJson" TEXT DEFAULT '{}';
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "slug" TEXT;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "onlineBookingEnabled" BOOLEAN DEFAULT true;
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "onlineServicesJson" TEXT DEFAULT '[]';
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "whatsappConfigJson" TEXT DEFAULT '{}';
+
+-- COLUMNAS ADICIONALES EN USER
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "matricula" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "specialty" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "shiftHours" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "workDays" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "dni" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "area" TEXT;
+

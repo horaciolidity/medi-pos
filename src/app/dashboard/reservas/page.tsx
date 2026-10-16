@@ -111,7 +111,7 @@ export default function ReservasPage() {
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [searchFilter, setSearchFilter] = useState('');
-
+  const [showOnlineOnly, setShowOnlineOnly] = useState(false);
   // Modal create
   const [showModal, setShowModal] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -176,6 +176,7 @@ export default function ReservasPage() {
       let url = `/api/appointments?date=${selectedDate}`;
       if (selectedDoctorId) url += `&doctorId=${selectedDoctorId}`;
       if (selectedStatus && selectedStatus !== 'ALL') url += `&status=${selectedStatus}`;
+      if (showOnlineOnly) url += `&onlineOnly=true`;
 
       const res = await fetch(url);
       if (res.ok) {
@@ -189,7 +190,7 @@ export default function ReservasPage() {
 
   useEffect(() => {
     fetchAppointments();
-  }, [selectedDate, selectedDoctorId, selectedStatus]);
+  }, [selectedDate, selectedDoctorId, selectedStatus, showOnlineOnly]);
 
   // Update status
   const handleUpdateStatus = async (id: string, newStatus: string) => {
@@ -432,6 +433,20 @@ export default function ReservasPage() {
               <option value="CANCELLED">Cancelados</option>
             </select>
           </div>
+
+          {/* Filtro: Solo Online */}
+          <button
+            type="button"
+            onClick={() => setShowOnlineOnly(!showOnlineOnly)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${
+              showOnlineOnly
+                ? 'bg-emerald-500 text-white border-emerald-500 shadow-md'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {showOnlineOnly ? 'Solo Online ✔' : 'Solo Reservas Online'}
+          </button>
         </div>
 
         {/* Search filter input */}
@@ -512,11 +527,16 @@ export default function ReservasPage() {
                       {/* Paciente */}
                       <td className="px-5 py-4">
                         <div className="space-y-0.5">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-bold text-slate-900">{patientName}</span>
                             {!app.patient && (
-                              <span className="text-[9px] bg-slate-100 text-slate-500 font-mono px-1.5 py-0.2 rounded">
+                              <span className="text-[9px] bg-slate-100 text-slate-500 font-mono px-1.5 py-0.5 rounded">
                                 Invitado
+                              </span>
+                            )}
+                            {(app as any).isOnlineBooking && (
+                              <span className="text-[9px] bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold px-1.5 py-0.5 rounded-full">
+                                📱 Online
                               </span>
                             )}
                           </div>

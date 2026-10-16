@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     async function loadMe() {
       try {
-        const res = await fetch('/api/auth/me');
+        const res = await fetch('/api/auth/me', { cache: 'no-store' });
         if (!res.ok) {
           router.push('/login');
           return;
@@ -48,6 +48,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     }
     loadMe();
+    const timer = setInterval(loadMe, 15000);
+    const onFocus = () => loadMe();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [router, pathname]);
 
   const handleLogout = async () => {
@@ -145,6 +152,59 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             Regularizar Plan
           </button>
+        </div>
+      )}
+
+      {/* Banner Superior Permanente: Días restantes de próximo pago + Upgrade a Pro + Promo 10+2 meses */}
+      {!isReadOnly && !subscription?.isTrial && !subscription?.isTrialLimitReached && subscription?.daysRemaining !== undefined && (
+        <div className={`px-4 sm:px-6 py-2 flex flex-col md:flex-row md:items-center justify-between gap-2 text-xs font-medium shadow-sm border-b transition-colors ${
+          subscription.daysRemaining <= 3
+            ? 'bg-rose-600 text-white border-rose-700'
+            : subscription.daysRemaining <= 7
+            ? 'bg-amber-500 text-slate-950 border-amber-600'
+            : 'bg-slate-900 text-slate-200 border-slate-800'
+        }`}>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="flex items-center gap-1.5 font-bold">
+              <CalendarDays className="w-4 h-4 text-sky-400 shrink-0" />
+              <span>
+                Próximo pago: Quedan <strong className={subscription.daysRemaining <= 3 ? 'underline font-black text-white' : 'font-black text-sky-300'}>
+                  {subscription.daysRemaining} {subscription.daysRemaining === 1 ? 'día' : 'días'}
+                </strong>
+                {subscription.expiresAt && (
+                  <span className="opacity-80 font-normal"> (Vence el {new Date(subscription.expiresAt).toLocaleDateString('es-AR')})</span>
+                )}
+              </span>
+            </span>
+
+            {/* Si es Standard, proponer pasarse a Pro en más chiquito */}
+            {subscription?.planCode === 'STANDARD' && (
+              <button
+                type="button"
+                onClick={() => setShowPlansModal(true)}
+                className="inline-flex items-center gap-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-400/30 px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors cursor-pointer"
+                title="Pasarse a Plan Pro para turnero avanzado con pantalla pública"
+              >
+                <Sparkles className="w-3 h-3 text-purple-300" />
+                <span>Pasate a Pro (Turnero en vivo)</span>
+              </button>
+            )}
+
+            {/* Bonificación: 10 meses seguidos = 2 meses gratis */}
+            <span className="hidden lg:inline-flex items-center gap-1 text-[11px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+              <span>🎁</span>
+              <span>Aboná 10 meses y obtené 2 meses de regalo</span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowPlansModal(true)}
+              className="bg-sky-500 hover:bg-sky-400 text-slate-950 px-3 py-1 rounded-lg text-xs font-black shrink-0 transition-colors shadow-sm"
+            >
+              {subscription.daysRemaining <= 7 ? 'Regularizar / Renovar' : 'Ver Planes & Descuentos'}
+            </button>
+          </div>
         </div>
       )}
 

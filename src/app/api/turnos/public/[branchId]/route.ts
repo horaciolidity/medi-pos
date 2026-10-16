@@ -25,9 +25,9 @@ export async function GET(req: NextRequest, { params }: { params: { branchId: st
       );
     }
 
-    // Obtener los turnos en estado CALLED o IN_ATTENTION de las últimas 4 horas
     const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
 
+    // Obtener turnos LLAMADOS o EN ATENCIÓN (para mostrar en pantalla)
     const activeTurnos = await prisma.queueTurno.findMany({
       where: {
         branchId,
@@ -45,13 +45,25 @@ export async function GET(req: NextRequest, { params }: { params: { branchId: st
       take: 6,
     });
 
-    const waitingCount = await prisma.queueTurno.count({
+    // Turnos en ESPERA (para mostrar próximos en cola)
+    const waitingTurnos = await prisma.queueTurno.findMany({
       where: {
         branchId,
         status: TurnoStatus.WAITING,
         createdAt: { gte: fourHoursAgo },
       },
+      select: {
+        id: true,
+        ticketNumber: true,
+        prefix: true,
+        number: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 5,
     });
+
+    const waitingCount = waitingTurnos.length;
 
     // Sanitized output: SOLO NÚMERO DE TICKET Y BOX (NUNCA DATOS PACIENTE NI DIAGNÓSTICO)
     const sanitizedTurnos = activeTurnos.map((t) => ({
@@ -62,6 +74,12 @@ export async function GET(req: NextRequest, { params }: { params: { branchId: st
       status: t.status,
     }));
 
+    // Próximos en cola (sin datos personales)
+    const waitingQueue = waitingTurnos.map((t) => ({
+      id: t.id,
+      ticketNumber: t.ticketNumber,
+    }));
+
     return NextResponse.json({
       success: true,
       clinicName: branch.company.name,
@@ -69,6 +87,7 @@ export async function GET(req: NextRequest, { params }: { params: { branchId: st
       lastCalled: sanitizedTurnos[0] || null,
       recentTurnos: sanitizedTurnos,
       waitingCount,
+      waitingQueue,  // próximos en fila
     });
   } catch (error) {
     console.error('Error en /api/turnos/public/[branchId]:', error);

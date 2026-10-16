@@ -22,7 +22,8 @@ import {
   Sparkles,
   X,
   User,
-  ArrowRight
+  ArrowRight,
+  Calendar
 } from 'lucide-react';
 
 export default function TurnosPage() {
@@ -47,22 +48,22 @@ export default function TurnosPage() {
   const [showQrModal, setShowQrModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Pantalla Mostrador / Cliente Recepción & Cobro de Coseguro
-  const [activeCounterTurno, setActiveCounterTurno] = useState<any>(null);
-  const [hasCoseguro, setHasCoseguro] = useState(false);
-  const [coseguroAmount, setCoseguroAmount] = useState('2500');
-  const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'ELECTRONICO'>('ELECTRONICO');
-  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  // Citas y Reservas Online de Hoy
+  const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'COLA' | 'CITAS'>('COLA');
+  const [admittingId, setAdmittingId] = useState<string | null>(null);
 
   const [error, setError] = useState('');
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [meRes, turnosRes, patientsRes] = await Promise.all([
+      const todayStr = new Date().toISOString().split('T')[0];
+      const [meRes, turnosRes, patientsRes, appRes] = await Promise.all([
         fetch('/api/auth/me'),
         fetch('/api/turnos'),
         fetch('/api/patients'),
+        fetch(`/api/appointments?date=${todayStr}`),
       ]);
 
       const meData = await meRes.json();
@@ -75,6 +76,9 @@ export default function TurnosPage() {
 
       const patientsData = await patientsRes.json();
       setPatients(patientsData.patients || []);
+
+      const appData = await appRes.json();
+      setTodayAppointments(appData.appointments || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -84,6 +88,8 @@ export default function TurnosPage() {
 
   useEffect(() => {
     loadData();
+    const interval = setInterval(loadData, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleGenerateTicket = async (e: React.FormEvent) => {
@@ -136,17 +142,41 @@ export default function TurnosPage() {
     }
   };
 
-  // Abre la pantalla de atención en mostrador para cobrar coseguro
-  const openCounterScreen = (t: any) => {
-    setActiveCounterTurno(t);
-    setHasCoseguro(true);
-    setCoseguroAmount('2500');
-    setPaymentMethod('ELECTRONICO');
-    setPaymentConfirmed(false);
-  };
+  // Admisión de un paciente que reservó cita online: generar ticket e ingresar a sala
+  const handleAdmitAppointment = async (app: any) => {
+    setAdmittingId(app.id);
+    setError('');
+    try {
+      // Generar ticket en la cola en vivo (Prefijo B = Turno Programado / Online)
+      const res = await fetch('/api/turnos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prefix: 'B',
+          patientId: app.patientId || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al emitir ticket de ingreso');
 
-  const handleConfirmCounterPayment = () => {
-    setPaymentConfirmed(true);
+      // Marcar la cita como ingresada a sala de espera
+      await fetch('/api/appointments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: app.id,
+          status: 'IN_WAITING_ROOM',
+        }),
+      });
+
+      setPrintedTicket(data.ticketPrintData);
+      setShowTicketModal(true);
+      loadData();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setAdmittingId(null);
+    }
   };
 
   // Enlace del portal de pacientes
@@ -165,10 +195,6 @@ export default function TurnosPage() {
   // URL del QR de reserva online para pacientes
   const qrOnlineBookingUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(patientBookingUrl)}`;
 
-  // URL del QR de pago de coseguro en mostrador (simulado o link de pago con datos de clínica)
-  const qrPaymentData = `PAGO CLINIC POS | CLINICA: ${user?.company?.name || 'CENTRO MEDICO'} | TICKET: ${activeCounterTurno?.ticketNumber || 'TICKET'} | COSEGURO: $${coseguroAmount} ARS | PACIENTE: ${activeCounterTurno?.patient ? `${activeCounterTurno.patient.firstName} ${activeCounterTurno.patient.lastName}` : 'PACIENTE'}`;
-  const qrPaymentUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(qrPaymentData)}`;
-
   const isReadOnly = subscription?.isReadOnly;
   const isPro = subscription?.isProTurneroEnabled;
 
@@ -181,7 +207,7 @@ export default function TurnosPage() {
             <Clock className="w-6 h-6 text-sky-600" /> Recepción & Turnero de Pacientes
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Gestión de sala de espera, emisión de tickets, atención en mostrador y enlace online para pacientes.
+            Gestión de sala de espera, llamado a boxes, emisión de tickets y recepción de citas online.
           </p>
         </div>
 
@@ -198,20 +224,14 @@ export default function TurnosPage() {
             </Link>
           )}
 
-          {/* Botón Mostrador / Pantalla Cliente */}
-          <button
-            onClick={() => {
-              if (turnos.length > 0) {
-                openCounterScreen(turnos[0]);
-              } else {
-                openCounterScreen({ ticketNumber: 'A001', patient: { firstName: 'Paciente', lastName: 'En Mostrador' } });
-              }
-            }}
+          {/* Acceso a Caja POS (El coseguro y cobros se gestionan en Caja) */}
+          <Link
+            href="/dashboard/caja"
             className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-colors"
           >
             <CreditCard className="w-4 h-4" />
-            <span>Mostrador & Coseguro QR</span>
-          </button>
+            <span>Caja POS & Cobros</span>
+          </Link>
 
           {/* Botón Nuevo Ticket */}
           <button
@@ -234,38 +254,77 @@ export default function TurnosPage() {
         </div>
       </div>
 
-      {/* BANNER: Enlace de Turnos para el Paciente (Turnos Futuros) */}
-      <div className="bg-gradient-to-r from-sky-950 via-slate-900 to-slate-900 border border-sky-800/60 p-5 rounded-3xl text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="space-y-1 max-w-xl">
-          <div className="flex items-center gap-2">
-            <span className="bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
-              <Sparkles className="w-3 h-3" /> Turnos Futuros del Paciente
-            </span>
-            <span className="text-xs font-bold text-slate-200">Enlace Online para que el Paciente Saque Turno</span>
+      {/* BANNER: Enlace de Turnos para el Paciente con Servicios Disponibles */}
+      <div className="bg-gradient-to-r from-sky-950 via-slate-900 to-slate-900 border border-sky-800/60 p-5 md:p-6 rounded-3xl text-white shadow-xl space-y-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="space-y-1 max-w-xl">
+            <div className="flex items-center gap-2">
+              <span className="bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
+                <Sparkles className="w-3 h-3" /> Turnos Futuros del Paciente
+              </span>
+              <span className="text-xs font-bold text-slate-200">Enlace Online para que el Paciente Saque Turno</span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Compartí este enlace con tus pacientes o mostrales el código QR en mostrador para que agenden turnos futuros desde su celular y reciban confirmación automática por WhatsApp.
+            </p>
           </div>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            Compartí este enlace en recepción o mostrale el código QR para que los pacientes agenden sus próximas consultas desde su celular y reciban confirmación automática por WhatsApp.
-          </p>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="flex-1 md:flex-initial bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors"
+            >
+              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-sky-400" />}
+              <span>{copiedLink ? '¡Enlace Copiado!' : 'Copiar Enlace'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowQrModal(true)}
+              className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-sky-500/20 shrink-0"
+            >
+              <QrCode className="w-4 h-4" />
+              <span>QR en Pantalla</span>
+            </button>
+
+            <a
+              href={patientBookingUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-300 font-bold px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shrink-0"
+              title="Abrir portal de turnos en nueva pestaña"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span className="hidden sm:inline">Ver Portal</span>
+            </a>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className="flex-1 md:flex-initial bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors"
+        {/* Listado de Servicios Disponibles en el Portal (3 servicios configurados) */}
+        <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
+            <span>Servicios habilitados para pacientes (3 disponibles):</span>
+          </span>
+          <span className="bg-sky-500/15 border border-sky-500/30 text-sky-200 text-[11px] font-semibold px-2.5 py-1 rounded-xl flex items-center gap-1.5">
+            <span>🩺</span>
+            <span>Consulta Médica General (20m · Sin Coseguro)</span>
+          </span>
+          <span className="bg-purple-500/15 border border-purple-500/30 text-purple-200 text-[11px] font-semibold px-2.5 py-1 rounded-xl flex items-center gap-1.5">
+            <span>👶</span>
+            <span>Pediatría (30m · Coseguro $2.500)</span>
+          </span>
+          <span className="bg-rose-500/15 border border-rose-500/30 text-rose-200 text-[11px] font-semibold px-2.5 py-1 rounded-xl flex items-center gap-1.5">
+            <span>❤️</span>
+            <span>Cardiología & ECG (30m · Coseguro $4.000)</span>
+          </span>
+          <Link
+            href="/dashboard/configuracion"
+            className="text-[11px] text-sky-400 hover:text-sky-300 font-bold underline ml-auto flex items-center gap-1"
           >
-            {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-sky-400" />}
-            <span>{copiedLink ? '¡Enlace Copiado!' : 'Copiar Enlace'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowQrModal(true)}
-            className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-sky-500/20 shrink-0"
-          >
-            <QrCode className="w-4 h-4" />
-            <span>QR en Pantalla</span>
-          </button>
+            <span>Configurar en Ajustes</span>
+            <ArrowRight className="w-3 h-3" />
+          </Link>
         </div>
       </div>
 
@@ -283,82 +342,244 @@ export default function TurnosPage() {
 
       {error && <div className="bg-red-50 text-red-700 p-3.5 rounded-xl text-xs border border-red-200">{error}</div>}
 
-      {/* Grid of Turnos in Queue */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs">
-        <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-          <h3 className="font-bold text-slate-900">Cola de Turnos del Día</h3>
-          <span className="text-[11px] font-semibold text-slate-500">{turnos.length} Turnos Registrados</span>
-        </div>
+      {/* Selector de Pestañas: Cola en Vivo vs Citas Online de Hoy */}
+      <div className="flex bg-slate-200/80 p-1 rounded-2xl w-full sm:w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveTab('COLA')}
+          className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'COLA'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Clock className="w-4 h-4 text-sky-600" />
+          <span>Cola en Vivo & Sala de Espera ({turnos.length})</span>
+        </button>
 
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-200 font-bold uppercase tracking-wider text-slate-500">
-            <tr>
-              <th className="p-4">Ticket</th>
-              <th className="p-4">Estado</th>
-              <th className="p-4">Paciente</th>
-              <th className="p-4">Consultorio / Box</th>
-              <th className="p-4 text-right">Acciones de Recepción</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {turnos.map((t) => (
-              <tr key={t.id} className="hover:bg-slate-50">
-                <td className="p-4 font-black text-sm text-sky-600 font-mono">{t.ticketNumber}</td>
-                <td className="p-4">
-                  {t.status === 'WAITING' && <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">En Espera</span>}
-                  {t.status === 'CALLED' && <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold animate-pulse">LLAMADO</span>}
-                  {t.status === 'IN_ATTENTION' && <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">En Atención</span>}
-                  {t.status === 'COMPLETED' && <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded">Finalizado</span>}
-                </td>
-                <td className="p-4">
-                  <div className="font-semibold text-slate-800">
-                    {t.patient ? `${t.patient.firstName} ${t.patient.lastName}` : 'Anónimo / Consulta'}
-                  </div>
-                  {t.patient?.documentNumber && (
-                    <div className="text-[10px] text-slate-400 font-mono">DNI: {t.patient.documentNumber}</div>
-                  )}
-                </td>
-                <td className="p-4 font-mono text-slate-600">{t.box?.name || 'Recepción'}</td>
-                <td className="p-4 text-right">
-                  <div className="flex items-center justify-end gap-1.5">
-                    {/* Botón Mostrador & Coseguro */}
-                    <button
-                      onClick={() => openCounterScreen(t)}
-                      className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1.5 rounded-lg font-bold text-xs transition-colors flex items-center gap-1"
-                      title="Atender en Mostrador y Cobro Coseguro con QR"
-                    >
-                      <CreditCard className="w-3.5 h-3.5" />
-                      <span>Cobrar Coseguro</span>
-                    </button>
-
-                    {/* Botón Llamar a Box */}
-                    {!isReadOnly && t.status === 'WAITING' && (
-                      <button
-                        onClick={() => {
-                          if (!isPro) {
-                            alert('El llamado desde boxes en tiempo real es exclusivo del Plan Pro.');
-                            return;
-                          }
-                          setCallingTurno(t);
-                        }}
-                        className="bg-purple-50 text-purple-700 hover:bg-purple-600 hover:text-white px-3 py-1.5 rounded-lg font-bold text-xs transition-colors flex items-center gap-1"
-                      >
-                        <Volume2 className="w-3.5 h-3.5" />
-                        <span>Llamar a Box</span>
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {turnos.length === 0 && !loading && (
-              <tr>
-                <td colSpan={5} className="p-8 text-center text-slate-400">No hay turnos registrados en la cola.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <button
+          type="button"
+          onClick={() => setActiveTab('CITAS')}
+          className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'CITAS'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Calendar className="w-4 h-4 text-purple-600" />
+          <span>Citas & Reservas Online de Hoy ({todayAppointments.length})</span>
+          {todayAppointments.length > 0 && (
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          )}
+        </button>
       </div>
+
+      {/* PESTAÑA 1: COLA EN VIVO DE SALA DE ESPERA */}
+      {activeTab === 'COLA' && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs">
+          <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+            <h3 className="font-bold text-slate-900">Cola de Turnos en Vivo del Día</h3>
+            <span className="text-[11px] font-semibold text-slate-500">{turnos.length} Turnos en Circulación</span>
+          </div>
+
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b border-slate-200 font-bold uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="p-4">Ticket</th>
+                <th className="p-4">Estado</th>
+                <th className="p-4">Paciente</th>
+                <th className="p-4">Consultorio / Box</th>
+                <th className="p-4 text-right">Llamado a Box</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {turnos.map((t) => (
+                <tr key={t.id} className="hover:bg-slate-50">
+                  <td className="p-4 font-black text-sm text-sky-600 font-mono">{t.ticketNumber}</td>
+                  <td className="p-4">
+                    {t.status === 'WAITING' && <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">En Espera</span>}
+                    {t.status === 'CALLED' && <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold animate-pulse">LLAMADO</span>}
+                    {t.status === 'IN_ATTENTION' && <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">En Atención</span>}
+                    {t.status === 'COMPLETED' && <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded">Finalizado</span>}
+                  </td>
+                  <td className="p-4">
+                    <div className="font-semibold text-slate-800">
+                      {t.patient ? `${t.patient.firstName} ${t.patient.lastName}` : 'Anónimo / Guardia'}
+                    </div>
+                    {t.patient?.documentNumber && (
+                      <div className="text-[10px] text-slate-400 font-mono">DNI: {t.patient.documentNumber}</div>
+                    )}
+                  </td>
+                  <td className="p-4 font-mono text-slate-600">{t.box?.name || 'Recepción'}</td>
+                  <td className="p-4 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {!isReadOnly && t.status === 'WAITING' && (
+                        <button
+                          onClick={() => {
+                            if (!isPro) {
+                              alert('El llamado desde boxes en tiempo real es exclusivo del Plan Pro.');
+                              return;
+                            }
+                            setCallingTurno(t);
+                          }}
+                          className="bg-purple-50 text-purple-700 hover:bg-purple-600 hover:text-white px-3 py-1.5 rounded-lg font-bold text-xs transition-colors flex items-center gap-1 shadow-sm"
+                        >
+                          <Volume2 className="w-3.5 h-3.5" />
+                          <span>Llamar a Box</span>
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {turnos.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-slate-400">
+                    No hay turnos registrados en la cola en vivo en este momento.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* PESTAÑA 2: CITAS & RESERVAS ONLINE DE HOY */}
+      {activeTab === 'CITAS' && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs">
+          <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+            <div>
+              <h3 className="font-bold text-slate-900">Citas & Turnos Online Agendados para Hoy</h3>
+              <p className="text-[11px] text-slate-500">
+                Cuando el paciente se presente en recepción, hacé clic en &ldquo;Ingresar a Sala&rdquo; para asignarle ticket e incorporarlo a la pantalla de llamados.
+              </p>
+            </div>
+            <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-xl">
+              {todayAppointments.length} Citas Registradas
+            </span>
+          </div>
+
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b border-slate-200 font-bold uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="p-4">Horario</th>
+                <th className="p-4">Paciente</th>
+                <th className="p-4">Servicio / Especialidad</th>
+                <th className="p-4">Médico Asignado</th>
+                <th className="p-4">Estado</th>
+                <th className="p-4 text-right">Acción de Ingreso</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {todayAppointments.map((app) => {
+                const patName = app.patient
+                  ? `${app.patient.firstName} ${app.patient.lastName}`
+                  : app.guestName || 'Paciente Invitado';
+                const patDoc = app.patient?.documentNumber || app.guestDni;
+                const patPhone = app.patient?.phone || app.guestPhone;
+                const timeStr = new Date(app.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+
+                return (
+                  <tr key={app.id} className="hover:bg-slate-50">
+                    <td className="p-4 font-mono font-bold text-sky-700">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-sky-500" />
+                        <span>{timeStr} hs</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-normal">{app.durationMins || 20}m</span>
+                    </td>
+
+                    <td className="p-4">
+                      <div className="font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
+                        <span>{patName}</span>
+                        {app.isOnlineBooking && (
+                          <span className="text-[9px] bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold px-1.5 py-0.5 rounded-full">
+                            📱 Reserva Online
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                        {patDoc && <span>DNI: {patDoc}</span>}
+                        {patPhone && <span>Tel: {patPhone}</span>}
+                      </div>
+                    </td>
+
+                    <td className="p-4">
+                      <span className="font-semibold text-slate-800 block">
+                        {app.serviceName || app.specialty || 'Consulta Médica'}
+                      </span>
+                      {app.hasCoseguro ? (
+                        <span className="text-[10px] text-amber-700 font-mono font-bold">
+                          Coseguro: ARS ${Number(app.coseguroAmount || 0).toLocaleString('es-AR')}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-emerald-600 font-semibold">Sin coseguro</span>
+                      )}
+                    </td>
+
+                    <td className="p-4">
+                      <span className="font-medium text-slate-700">
+                        {app.doctor ? `Dr/a. ${app.doctor.firstName} ${app.doctor.lastName}` : 'Cualquier disponible'}
+                      </span>
+                    </td>
+
+                    <td className="p-4">
+                      {app.status === 'CONFIRMED' && (
+                        <span className="bg-sky-50 text-sky-700 border border-sky-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          Confirmado
+                        </span>
+                      )}
+                      {app.status === 'IN_WAITING_ROOM' && (
+                        <span className="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          En Sala de Espera
+                        </span>
+                      )}
+                      {app.status === 'ATTENDED' && (
+                        <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          Atendido
+                        </span>
+                      )}
+                      {app.status === 'PENDING' && (
+                        <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          Pendiente
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="p-4 text-right">
+                      {app.status !== 'IN_WAITING_ROOM' && app.status !== 'ATTENDED' ? (
+                        <button
+                          onClick={() => handleAdmitAppointment(app)}
+                          disabled={admittingId === app.id}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all shadow-md shadow-emerald-600/20 inline-flex items-center gap-1.5 disabled:opacity-50"
+                          title="Generar ticket e incorporar a la cola de espera"
+                        >
+                          <Ticket className="w-3.5 h-3.5" />
+                          <span>{admittingId === app.id ? 'Generando...' : 'Ingresar a Sala'}</span>
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-emerald-600 font-bold">✔ En Circulación</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {todayAppointments.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={6} className="p-12 text-center space-y-2">
+                    <Calendar className="w-8 h-8 text-slate-300 mx-auto" />
+                    <p className="text-sm font-bold text-slate-700">No hay citas programadas para hoy</p>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto">
+                      Los pacientes que reserven un turno para la fecha de hoy desde el enlace online aparecerán aquí con sus datos y motivo de consulta.
+                    </p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* MODAL 1: QR GIGANTE PARA QUE EL PACIENTE SAQUE TURNOS ONLINE */}
       {showQrModal && (
@@ -408,184 +629,6 @@ export default function TurnosPage() {
               >
                 Listo
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 2: PANTALLA CLIENTE / MOSTRADOR RECEPCIÓN & QR DE PAGO DE COSEGURO */}
-      {activeCounterTurno && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 md:p-8 space-y-6 shadow-2xl text-white">
-            {/* Header del Mostrador */}
-            <div className="flex justify-between items-start border-b border-slate-800 pb-4">
-              <div>
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                  <CreditCard className="w-4 h-4" /> Mostrador de Recepción & Atención al Paciente
-                </span>
-                <h3 className="text-xl font-black text-white mt-1">
-                  Atención Ticket <span className="text-sky-400 font-mono">{activeCounterTurno.ticketNumber}</span>
-                </h3>
-              </div>
-              <button
-                onClick={() => setActiveCounterTurno(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-xl hover:bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Datos del Turno y Paciente */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800/80 text-xs">
-              <div>
-                <span className="text-slate-400 block text-[11px]">Paciente:</span>
-                <p className="font-bold text-white text-sm">
-                  {activeCounterTurno.patient ? `${activeCounterTurno.patient.firstName} ${activeCounterTurno.patient.lastName}` : 'Paciente en Mostrador'}
-                </p>
-                {activeCounterTurno.patient?.documentNumber && (
-                  <p className="text-slate-400 font-mono mt-0.5">DNI: {activeCounterTurno.patient.documentNumber}</p>
-                )}
-              </div>
-
-              <div>
-                <span className="text-slate-400 block text-[11px]">Cobertura Médica:</span>
-                <p className="font-semibold text-sky-400">
-                  {activeCounterTurno.patient?.medicalInsuranceName || 'Particular / Sin cobertura'}
-                </p>
-                {activeCounterTurno.patient?.affiliateNumber && (
-                  <p className="text-slate-400 font-mono mt-0.5">Nº Afiliado: {activeCounterTurno.patient.affiliateNumber}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Configuración de Coseguro */}
-            <div className="bg-slate-800/70 border border-slate-700/80 p-5 rounded-2xl space-y-4 text-xs">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-amber-400" />
-                  <span className="font-bold text-slate-200">Cobro de Coseguro / Arancel Médico</span>
-                </div>
-                <label className="flex items-center gap-2 cursor-pointer font-bold text-sky-400">
-                  <input
-                    type="checkbox"
-                    checked={hasCoseguro}
-                    onChange={(e) => setHasCoseguro(e.target.checked)}
-                    className="rounded text-sky-500 focus:ring-sky-400"
-                  />
-                  <span>Aplica Coseguro</span>
-                </label>
-              </div>
-
-              {hasCoseguro && (
-                <div className="space-y-4 pt-2 border-t border-slate-700/60">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Monto Coseguro (ARS $)</label>
-                      <input
-                        type="number"
-                        min={0}
-                        step={100}
-                        value={coseguroAmount}
-                        onChange={(e) => setCoseguroAmount(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-amber-300 font-mono font-bold focus:outline-none focus:border-amber-400"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Medio de Pago</label>
-                      <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-700">
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod('ELECTRONICO')}
-                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                            paymentMethod === 'ELECTRONICO'
-                              ? 'bg-emerald-500 text-slate-950 shadow-md font-extrabold'
-                              : 'text-slate-400 hover:text-white'
-                          }`}
-                        >
-                          QR / Electrónico
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod('EFECTIVO')}
-                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                            paymentMethod === 'EFECTIVO'
-                              ? 'bg-emerald-500 text-slate-950 shadow-md font-extrabold'
-                              : 'text-slate-400 hover:text-white'
-                          }`}
-                        >
-                          Efectivo
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* GENERADOR DE CÓDIGO QR EN PANTALLA PARA EL PACIENTE */}
-                  {paymentMethod === 'ELECTRONICO' && (
-                    <div className="bg-slate-950 border border-emerald-500/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
-                      <div className="bg-white p-2.5 rounded-xl shadow-lg shrink-0">
-                        <img
-                          src={qrPaymentUrl}
-                          alt="QR Pago Coseguro"
-                          className="w-36 h-36 rounded"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full inline-block">
-                          QR Interoperable / Transferencia
-                        </span>
-                        <h4 className="font-black text-white text-base">
-                          Total a Pagar: ARS ${Number(coseguroAmount).toLocaleString('es-AR')}
-                        </h4>
-                        <p className="text-slate-400 text-[11px] leading-relaxed">
-                          Mostrale este código al paciente para que escanee con <strong>Mercado Pago, MODO, Cuenta DNI</strong> o cualquier billetera bancaria.
-                        </p>
-                        <div className="text-[10px] text-slate-500 font-mono pt-1">
-                          Clínica: {user?.company?.name || 'Clínica POS'} · Ticket {activeCounterTurno.ticketNumber}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Confirmación y Acciones */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => {
-                  window.print();
-                }}
-                className="w-full sm:w-auto px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors border border-slate-700"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Imprimir Ticket Comprobante</span>
-              </button>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={() => setActiveCounterTurno(null)}
-                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white bg-slate-800 transition-colors"
-                >
-                  Cerrar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleConfirmCounterPayment();
-                    alert(`¡Atención confirmada para el ticket ${activeCounterTurno.ticketNumber}! Coseguro registrado.`);
-                    setActiveCounterTurno(null);
-                  }}
-                  className="flex-1 sm:flex-initial px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Confirmar & Pasar a Espera</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>

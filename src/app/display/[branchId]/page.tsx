@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Volume2, Monitor, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Volume2, Monitor, AlertTriangle, Clock, Users } from 'lucide-react';
 
 export default function PublicTurneroDisplayPage({ params }: { params: { branchId: string } }) {
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState('');
   const [lastTicket, setLastTicket] = useState<string>('');
+  const [time, setTime] = useState<string>('');
 
-  const fetchDisplayData = async () => {
+  const fetchDisplayData = useCallback(async () => {
     try {
       const res = await fetch(`/api/turnos/public/${params.branchId}`);
       const result = await res.json();
@@ -31,13 +32,24 @@ export default function PublicTurneroDisplayPage({ params }: { params: { branchI
     } catch (err: any) {
       setError(err.message);
     }
-  };
+  }, [params.branchId, lastTicket]);
 
   useEffect(() => {
     fetchDisplayData();
-    const interval = setInterval(fetchDisplayData, 3000); // Polling cada 3 segundos en tiempo real
+    const interval = setInterval(fetchDisplayData, 3000);
     return () => clearInterval(interval);
   }, [params.branchId]);
+
+  // Reloj en tiempo real
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      setTime(now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   if (error) {
     return (
@@ -53,69 +65,155 @@ export default function PublicTurneroDisplayPage({ params }: { params: { branchI
 
   const currentCalled = data?.lastCalled;
   const recentList = data?.recentTurnos || [];
+  const waitingQueue = data?.waitingQueue || [];
+  const waitingCount = data?.waitingCount ?? 0;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between p-8 font-sans">
+    <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans">
       {/* Top Header */}
-      <header className="flex justify-between items-center border-b border-slate-800/80 pb-6">
+      <header className="flex justify-between items-center px-8 py-5 border-b border-slate-800/80 shrink-0">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tight uppercase">{data?.clinicName || 'Centro Médico'}</h1>
-          <p className="text-sm font-semibold text-slate-400 mt-1">{data?.branchName || 'Sede Central'} — Llamado a Consultorios</p>
+          <h1 className="text-3xl font-black text-white tracking-tight uppercase">
+            {data?.clinicName || 'Centro Médico'}
+          </h1>
+          <p className="text-sm font-semibold text-slate-400 mt-1">
+            {data?.branchName || 'Sede Central'} — Sistema de Llamados
+          </p>
         </div>
-        <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-4 py-2 rounded-2xl">
-          <Monitor className="w-5 h-5 text-sky-400 animate-pulse" />
-          <span className="text-xs font-mono font-bold text-sky-400 uppercase">Turnero Pro en Vivo</span>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <div className="font-mono font-black text-4xl text-sky-400 tabular-nums tracking-widest">
+              {time}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-2xl">
+            <Monitor className="w-5 h-5 text-sky-400 animate-pulse" />
+            <span className="text-xs font-mono font-bold text-sky-400 uppercase">En Vivo</span>
+          </div>
         </div>
       </header>
 
-      {/* Hero Display: Último Ticket Llamado */}
-      <main className="my-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-center py-6">
-        <div className="lg:col-span-2 bg-gradient-to-br from-slate-900 to-slate-950 border-2 border-sky-500/50 p-12 rounded-3xl text-center space-y-6 shadow-2xl shadow-sky-500/10">
-          <span className="text-sm font-bold uppercase tracking-widest text-sky-400 flex items-center justify-center gap-2">
-            <Volume2 className="w-5 h-5 animate-bounce" /> Llama en este momento
-          </span>
+      {/* Main grid */}
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-0 min-h-0">
 
+        {/* ===== COLUMNA PRINCIPAL: Ticket actual llamado ===== */}
+        <div className="lg:col-span-2 flex flex-col items-center justify-center p-8 border-r border-slate-800/60">
           {currentCalled ? (
-            <div className="space-y-4">
-              <div className="text-8xl md:text-9xl font-black tracking-widest text-white font-mono drop-shadow-lg">
+            /* Un ticket fue llamado a box */
+            <div className="w-full max-w-xl text-center space-y-6">
+              <span className="text-base font-bold uppercase tracking-widest text-sky-400 flex items-center justify-center gap-2 animate-pulse">
+                <Volume2 className="w-6 h-6" /> Llamando en este momento
+              </span>
+
+              <div
+                className="font-black font-mono text-white drop-shadow-2xl leading-none"
+                style={{ fontSize: 'clamp(6rem, 20vw, 14rem)' }}
+              >
                 {currentCalled.ticketNumber}
               </div>
 
-              <div className="inline-block bg-sky-500 text-slate-950 font-black text-3xl md:text-4xl px-8 py-4 rounded-2xl shadow-lg">
+              <div className="bg-sky-500 text-slate-950 font-black rounded-3xl px-10 py-5 inline-block shadow-2xl shadow-sky-500/30"
+                style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)' }}
+              >
                 PASE A: {currentCalled.boxName}
               </div>
             </div>
+          ) : waitingQueue.length > 0 ? (
+            /* Nadie llamado aún pero hay cola — mostrar próximo en espera */
+            <div className="w-full max-w-xl text-center space-y-6">
+              <span className="text-base font-bold uppercase tracking-widest text-amber-400 flex items-center justify-center gap-2">
+                <Clock className="w-6 h-6" /> Próximo en ser atendido
+              </span>
+
+              <div
+                className="font-black font-mono text-amber-300 drop-shadow-2xl leading-none opacity-80"
+                style={{ fontSize: 'clamp(5rem, 18vw, 12rem)' }}
+              >
+                {waitingQueue[0]?.ticketNumber}
+              </div>
+
+              <div className="bg-amber-500/20 border-2 border-amber-500/40 text-amber-300 font-black rounded-3xl px-10 py-5 inline-block"
+                style={{ fontSize: 'clamp(1.2rem, 3vw, 2rem)' }}
+              >
+                EN SALA DE ESPERA
+              </div>
+            </div>
           ) : (
-            <div className="py-12 text-slate-500 text-2xl font-bold">Aguardando llamado...</div>
+            /* Cola vacía */
+            <div className="text-center space-y-4">
+              <Users className="w-20 h-20 text-slate-700 mx-auto" />
+              <div className="text-slate-500 text-3xl font-bold">Sin turnos en espera</div>
+              <p className="text-slate-600 text-sm">El sistema está en reposo. Los llamados aparecerán aquí en tiempo real.</p>
+            </div>
           )}
         </div>
 
-        {/* Lista de Últimos Llamados */}
-        <div className="bg-slate-900/80 border border-slate-800 p-6 rounded-3xl space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-3">
-            Últimos Llamados
-          </h3>
+        {/* ===== COLUMNA DERECHA: Cola y últimos llamados ===== */}
+        <div className="flex flex-col divide-y divide-slate-800/60">
 
-          <div className="space-y-3">
-            {recentList.slice(1).map((t: any) => (
-              <div key={t.id} className="bg-slate-950 border border-slate-800/80 p-4 rounded-2xl flex justify-between items-center">
-                <span className="text-3xl font-black font-mono text-white tracking-wider">{t.ticketNumber}</span>
-                <span className="text-sm font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-3 py-1 rounded-xl">
-                  {t.boxName}
-                </span>
+          {/* Últimos llamados */}
+          <div className="p-6 space-y-3 flex-1">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+              <Volume2 className="w-3.5 h-3.5 text-sky-400" /> Últimos Llamados
+            </h3>
+            <div className="space-y-2">
+              {recentList.slice(0, 5).map((t: any, i: number) => (
+                <div
+                  key={t.id}
+                  className={`flex justify-between items-center p-3.5 rounded-2xl border ${i === 0
+                    ? 'bg-sky-500/10 border-sky-500/30 text-sky-300'
+                    : 'bg-slate-900 border-slate-800 text-slate-400'
+                  }`}
+                >
+                  <span className={`font-black font-mono tracking-wider ${i === 0 ? 'text-4xl text-sky-200' : 'text-2xl'}`}>
+                    {t.ticketNumber}
+                  </span>
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-xl ${i === 0
+                    ? 'bg-sky-500/20 border border-sky-500/40 text-sky-300'
+                    : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {t.boxName}
+                  </span>
+                </div>
+              ))}
+              {recentList.length === 0 && (
+                <p className="text-xs text-slate-600 text-center py-6">Sin llamados aún.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Cola de espera */}
+          <div className="p-6 space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-3 flex items-center gap-2">
+              <Users className="w-3.5 h-3.5" /> Cola de Espera
+            </h3>
+            {waitingQueue.length > 0 ? (
+              <div className="space-y-2">
+                {waitingQueue.map((t: any, i: number) => (
+                  <div key={t.id} className="flex justify-between items-center bg-amber-500/5 border border-amber-500/20 p-3 rounded-xl">
+                    <span className="font-black font-mono text-2xl text-amber-200">{t.ticketNumber}</span>
+                    <span className="text-[10px] text-amber-500 font-bold">#{i + 1}</span>
+                  </div>
+                ))}
+                {waitingCount > waitingQueue.length && (
+                  <p className="text-[11px] text-slate-500 text-center pt-1">
+                    +{waitingCount - waitingQueue.length} más en espera
+                  </p>
+                )}
               </div>
-            ))}
-
-            {recentList.length <= 1 && (
-              <p className="text-xs text-slate-500 text-center py-6">Sin otros llamados recientes.</p>
+            ) : (
+              <p className="text-xs text-slate-600 text-center py-3">Cola vacía.</p>
             )}
           </div>
         </div>
       </main>
 
-      {/* Footer Sanitizado */}
-      <footer className="border-t border-slate-800/80 pt-4 flex justify-between items-center text-xs text-slate-500">
-        <span>Pacientes en espera: <strong className="text-white font-mono">{data?.waitingCount || 0}</strong></span>
+      {/* Footer */}
+      <footer className="border-t border-slate-800/80 px-8 py-4 flex justify-between items-center text-xs text-slate-500 shrink-0">
+        <span>
+          Pacientes en espera:{' '}
+          <strong className="text-white font-mono text-sm">{waitingCount}</strong>
+        </span>
         <span>Por su seguridad y privacidad, sólo se muestran números de ticket y consultorio.</span>
       </footer>
     </div>
